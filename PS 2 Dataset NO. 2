@@ -1,15 +1,17 @@
+//important that code doesnt break; so everything thats not command must be coomented
 https: //drive.google.com/file/d/1_fyr5r-idfQceAAuzKuuoPilO9cr370W/view?usp=sharing
 
 
-https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download
+//https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download
 
+//this is good
 * Data Management dofile
 *Chengcheng Yue(Zachary), the Spring Term
 *Revised: spring 10
 *Revised: spring 16
 2021sp
 *----------------------------
-  
+//this is great!  
 *notes :  here could be notes
 *This dataset is from the website of the university of groningen
 *PWT version 10.0 is a database with information on relative levels of income, output, input and productivity, covering 183 countries between 1950 and 2019.
@@ -56,3 +58,8 @@ sum
 
 clear all
 exit
+
+//here saving in 3 different formats
+save mydata, replace
+export excel mydata.xlsx, replace
+outsheet using mydat.csv ,comma replace
