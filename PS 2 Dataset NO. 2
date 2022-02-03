@@ -32,6 +32,9 @@ set logtype text
 use "https://docs.google.com/uc?id=1_fyr5r-idfQceAAuzKuuoPilO9cr370W&export=download", clear
 des
 sum
+label list
+return list
+
 
 count
 sample 25
