@@ -1,0 +1,165 @@
+*______________________________________________________________________
+* Data Management PS 2 dofile
+*Chengcheng Yue (Zach)---------
+  
+/* The reasons why I choose these datasets: My research interests mainly lie in 
+social policy and economic policy. At this point, I would like to have a look at the 
+performance of the US economy within a ten-year period of time from 2006 to 2015. 
+Therefore, I downloaded my first dataset from the Global Welfare website, and 
+this dataset records some very important parts of the US economy including GDP, 
+cash flow, foreign direct investment, income, savings, consumption, interest rates, 
+and the like. The second dataset was downloaded from the World Bank. It contains
+information about adjusted net national income and adjusted savings. I want to 
+merge these two datasets to see whether there is some relationship or connection
+between them. */
+
+*----------------------------
+
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+
+clear         
+set matsize 800  
+version 17.0
+set more off
+cap log close  //capture is cool--it supresses error :)
+set logtype text
+
+/*notes: here could be notes*/
+
+/*The first dataset is my original dataset which is from the Global Welfare(GLOW)*/
+/*For this dataset, I only want to use the data of the United States, so I will 
+edit the whole dataset to keep the only things I want */ 
+/* the URL for this data source: https://glow.ku.edu.tr/download */
+
+*The second dataset is from the website of the World Bank
+*It is a database with information on national income and savings of the United States between 2006 and 2015
+/*the URL for this data source: https://databank.worldbank.org/reports.aspx?source=2&country=USA*/
+
+
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+drop if V3 ~= 59 //I only want to keep the data of the United States
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+
+drop if V2 == 1989 //delete all the data from 1989 to 2005
+drop if V2 == 1990
+drop if V2 == 1991
+drop if V2 == 1992
+drop if V2 == 1993
+drop if V2 == 1994
+drop if V2 == 1995
+drop if V2 == 1996
+drop if V2 == 1997
+drop if V2 == 1998
+drop if V2 == 1999
+drop if V2 == 2000
+drop if V2 == 2001
+drop if V2 == 2002
+drop if V2 == 2003
+drop if V2 == 2004
+drop if V2 == 2005 //I only want to keep the data from year 2006 to 2015
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209 %10.1f //decide how many decimals I want to look at for this variable
+format V210 %10.1f
+format V211 %10.1f
+format V212 %10.1f
+format V213 %10.1f
+format V214 %10.1f
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+pwd
+
+sum V241
+recode V241 (min/1.9 =1) (1.9/2.4 =2) (2.4/max =3), gen(GDP_V241)
+list V241 GDP_V241 in 1/10, sepby(GDP_V241)
+
+bys V271: egen avgGDP=mean(V241)
+
+sort year //to rearrange this variable in ascending order 
+
+egen avg_FDI = mean (V230)
+egen med_FDI = median (V230)
+gen dev_FDI = V230-avg_FDI
+egen s_FDI = std(V230) //to calculate some group statistics
+
+replace V262 = int(V262)
+replace V265 = int(V265)
+egen diff = diff (V265 V262)
+sort diff
+list V265 diff V262 in 1/10
+
+save PS2GLOW, replace
+export excel PS2GLOW.xlsx, replace
+
+use "https://docs.google.com/uc?id=1hV1JsOdL7JdP30tvYYeHOdeav0Tf_gUL&export=download", clear
+
+reshape long yr, i (seriesname seriescode) j(j) //reshape the dataset to make it fit with my other one
+drop if j == 1990 //I only need the data from 2006 to 2015
+rename yr number //rename the variable yr because it is not correct
+rename j year 
+rename countryname country
+format number %23.2f //I only want two decimals
+sort year //to rearrange the variable year in ascending order
+
+order country countrycode year seriesname seriescode
+order year, before(countrycode)
+
+drop if number >= 100 //I only focus on the percentages not the real values
+
+sum number
+recode number (min/4 =1) (4/8 =2) (8/12 =3) (12/16 =4) (16/max =5), gen(percent_number)
+list number percent_number in 1/60, sepby(percent_number)
+
+egen avg_N = mean (number)
+egen med_N = median (number)
+gen dev_N = number-avg_N
+egen s_N = std(number) //to calculate some group statistics
+
+pctile p_number = number, nq(10)
+list p_number in 1/12, sep(0)
+sum number, detail
+pctile p_number2 = number, nq(10) gen(percent)
+list percent p_number2 in 1/12, sep(0) //to get the information on the percentiles of the variable
+
+replace number = int(number)
+replace avg_N = int(avg_N)
+egen diff = diff (number avg_N)
+sort diff
+list number diff avg_N in 1/60
+
+bys number: egen avg_number=mean(number)
+pwd
+personal
+personal dir
+
+save PS2WB, replace
+export excel PS2WB.xlsx, replace
+
+use PS2WB.dta, clear
+merge m:1 year using PS2GLOW.dta, nogen //merge the two datasets
+
+browse //to see if anything goes wrong
+
+save PS2_DataManagement.dta, replace
