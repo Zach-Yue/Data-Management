@@ -163,3 +163,6 @@ merge m:1 year using PS2GLOW.dta, nogen //merge the two datasets
 browse //to see if anything goes wrong
 
 save PS2_DataManagement.dta, replace
+
+clear
+exit
