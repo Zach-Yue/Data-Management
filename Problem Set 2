@@ -1,3 +1,29 @@
+//this is one way to do it
+preserve
+reshape long yr ,i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+
+reshape wide yr,i(year)j(seriescode)string
+restore
+
+//another way keep it simple
+preserve
+keep if seriescode=="NY.ADJ.NNTY.KD.ZG"
+reshape long yr, i(countrycode) j(year) //reshape the dataset to make it fit with my other one
+save nnty,replace
+restore
+preserve
+keep if seriescode=="another var"
+reshape long yr, i(countrycode) j(year) //reshape the dataset to make it fit with my other one
+save anotherOne,replace
+restore
+//replace seriescode=strtoname(seriescode)
+//reshape wide yr, i(countrycode year)j(seriescode)string
+//restore
+
+
+
 *______________________________________________________________________
 * Data Management PS 2 dofile
 *Chengcheng Yue (Zach)---------
