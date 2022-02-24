@@ -292,7 +292,7 @@ save PS34merge, replace
 export excel PS34merge.xlsx, replace //merge the three datasets
 
 use PS34merge.dta
-merge m:1 year using PS32merge.dta, nogen
+merge m:1 year using PS32merge.dta, generate(_mergectyp)
 save PS35merge, replace
 export excel PS35merge.xlsx, replace //merge the three datasets
 
