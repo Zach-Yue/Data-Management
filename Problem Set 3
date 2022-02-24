@@ -300,5 +300,15 @@ export excel PS35merge.xlsx, replace //merge the three datasets
 
 browse //to see if anything goes wrong
 
+/* the result of the final merging work:
+merge m:1 year using PS32merge.dta, generate(_mergectyp)
+(variable country was str2, now str87 to accommodate using data's values)
+
+   * Result                      Number of obs
+   *-----------------------------------------
+   * Not matched                             0
+   * Matched                               410  (_mergectyp==3)
+   *-----------------------------------------    */
+
 clear
 exit
