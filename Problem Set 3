@@ -79,12 +79,8 @@ rename V1 country
 rename V2 year
 rename V3 ID //to make these variables look clear 
 
-format V209 %10.1f //decide how many decimals I want to look at for this variable
-format V210 %10.1f
-format V211 %10.1f
-format V212 %10.1f
-format V213 %10.1f
-format V214 %10.1f
+more efficient
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
 sum V209 V210 V211 V212 V213 V214, format
 sum V209 V210 V211 V212 V213 V214, detail
 codebook V209-V214 /* examine the variable names, labels, and data */
@@ -114,6 +110,7 @@ sort diff
 list V265 diff V262 in 1/10
 
 save PS31GLOW, replace
+//i guess we dont really need excel
 export excel PS31GLOW.xlsx, replace
 
 use "https://docs.google.com/uc?id=1hV1JsOdL7JdP30tvYYeHOdeav0Tf_gUL&export=download", clear
@@ -138,6 +135,7 @@ export excel PS32WB.xlsx, replace
 
 use PS32WB.dta, clear
 merge 1:1 year using PS31GLOW.dta, nogen //merge the two datasets
+//rather avoid nogen because _merge that is generated if you dont use nogen is usually very useful
 save PS31merge, replace
 export excel PS31merge.xlsx, replace
 
@@ -238,10 +236,13 @@ label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for
 
 reshape long yr, i(subject) j(year)
 
+//but this is not ready for merging! should have reshaped this to wide, so that var names are in columns, not rows!!! and same later
+
 save PS35IMF, replace
 export excel PS35IMF.xlsx, replace
 
-merge m:m year using PS34BEA.dta, nogen
+//no! never use many to many!! and same thing below
+merge 1:1 year using PS34BEA.dta, nogen
 save PS33merge, replace
 export excel PS33merge.xlsx, replace //merge the datasets of stats and BEA
 
