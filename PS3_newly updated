@@ -14,7 +14,12 @@ In order to answer the following research questions:
 1) What factors have an effect on US economy performance?
 2) What can be the most important indicator(s) amongst them?
 
-In economics, we can use the principal of "supply and demand" to analyze the economic performance of a certain country. First of all, what factors are considered important for a specific country. In my case, to dig into the economic factors and indicators of US economy need me to find the decisive one(s), and this is the key task I want to complete in this project. Besides, I can also determine whether there is some notable relationship or connection between different factors and indicators. 
+In economics, we can use the principal of "supply and demand" to analyze the economic performance
+of a certain country. First of all, what factors are considered important for a specific country. 
+In my case, to dig into the economic factors and indicators of the US economy need me to find
+the decisive one(s), and this is the key task I want to complete in this project. Besides, 
+I also seek to determine whether there is some notable relationship or connection between 
+different factors and indicators. 
 ********************
 */
 
@@ -157,7 +162,9 @@ replace country = "United States" in 1/10
 
 save PS33STAT.dta, replace
 
+use PS33STAT.dta, clear
 merge 1:1 year using PS31merge.dta, generate(merge2)
+
 save PS32merge.dta, replace //merget the three datasets
 
 pwd
@@ -314,6 +321,8 @@ save PS36UN, replace
 
 use PS36UN, clear 
 merge 1:1 year using PS34merge.dta, generate(merge6) force
+
+compress
 
 save PS35merge, replace
 
