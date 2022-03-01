@@ -64,7 +64,7 @@ edit the whole dataset to keep the only things I want */
 * The seventh dataset is from the United Nations
 /* The URL used to download the data: https://unstats.un.org/unsd/trade/data/tables.asp#historical */
 
-*LOW data
+*GLOW data
 use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
 
 d 
