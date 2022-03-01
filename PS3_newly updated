@@ -1,0 +1,392 @@
+*______________________________________________________________________
+* Data Management PS 3 updataed dofile
+* Chengcheng Yue (Zach)---------
+  
+/* 
+********************
+Preamble: this file pulls down seven datasets: 1) a list of important information
+on US economy; 2) information on national income and savings of the United States; 
+3) union memerbership and employment in the United States; 4) digital economy gross output
+by component; 5) US economic outlook data; 6) US health expenditure data; 7) exports and 
+import data of the United States
+
+In order to answer the following research questions:
+1) What factors have an effect on US economy performance?
+2) What can be the most important indicator(s) amongst them?
+
+In economics, we can use the principal of "supply and demand" to analyze the economic performance of a certain country. First of all, what factors are considered important for a specific country. In my case, to dig into the economic factors and indicators of US economy need me to find the decisive one(s), and this is the key task I want to complete in this project. Besides, I can also determine whether there is some notable relationship or connection between different factors and indicators. 
+********************
+*/
+
+*----------------------------
+
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+
+clear         
+set matsize 800 // Sets the maximum number of variables to specific amount, default is 400
+version 17.0
+set more off
+cap log close  // capture is cool--it supresses error :)
+log using mylog3.log, text replace
+dis "Problem Set 3 for Data Management"
+
+/*notes: here could be notes*/
+
+/*The first dataset is my original dataset which is from the Global Welfare(GLOW)*/
+/*For this dataset, I only want to use the data of the United States, so I will 
+edit the whole dataset to keep the only things I want */ 
+/* The URL for this data source: https://glow.ku.edu.tr/download */
+
+*The second dataset is from the website of the World Bank
+*It is a database with information on national income and savings of the United States between 2006 and 2015
+/* The URL for this data source: https://databank.worldbank.org/reports.aspx?source=2&country=USA */
+
+*The third dataset is from the personal website created by two professors
+*It is a dataset about union merbership and employment
+/* The URL for this data source: https://www.unionstats.com/ */
+
+*The fourth dataset is from the Bureau of Economic Analysis of the US Department of Commerce
+/* The URL used to download the data: https://www.bea.gov/data/special-topics/digital-economy */
+
+*The fifth dataset is from the International Monetary Fund
+/* The URL for this data source: https://www.imf.org/en/Publications/WEO/weo-database/2021/October/download-entire-database */ 
+
+* The sixth dataset is from the World Health Organization
+/* The URL for this data source: https://apps.who.int/nha/database/ViewData/Indicators/en */
+
+* The seventh dataset is from the United Nations
+/* The URL used to download the data: https://unstats.un.org/unsd/trade/data/tables.asp#historical */
+
+*DLOW data
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 59 //I only want to keep the data of the United States
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+pwd
+
+sum V241
+recode V241 (min/1.9 =1) (1.9/2.4 =2) (2.4/max =3), gen(GDP_V241)
+list V241 GDP_V241 in 1/10, sepby(GDP_V241)
+
+bys V271: egen avgGDP=mean(V241)
+
+sort year //to rearrange this variable in ascending order 
+
+egen avg_FDI = mean(V230)
+egen med_FDI = median(V230)
+gen dev_FDI = V230-avg_FDI
+egen s_FDI = std(V230) //to calculate some group statistics
+
+replace V262 = int(V262)
+replace V265 = int(V265)
+egen diff = diff(V265 V262)
+sort diff
+list V265 diff V262 in 1/10
+
+save PS31GLOW, replace
+
+*WB data
+use "https://docs.google.com/uc?id=1hV1JsOdL7JdP30tvYYeHOdeav0Tf_gUL&export=download", clear
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+drop in 1 //only need the data from 2006 to 2015
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS32WB.dta, replace
+
+use PS32WB.dta, clear
+merge 1:1 year using PS31GLOW.dta, generate(merge1) //merge the two datasets
+
+save PS31merge.dta, replace
+
+browse //to see if anything goes wrong
+
+*stats website data
+use "https://docs.google.com/uc?id=12LB33i7vnc3lmboC7PFDeeKTPFPuTpUi&export=download", clear
+
+drop in 51/62 //delete the unnecessary part of the dataset
+destring Year, generate (year)
+drop if year >= 2016
+drop if year <= 2005 //only keep the data from 2006 to 2015
+misstable tree year //make sure there is no missing year value
+list 
+
+rename Year country
+replace country = "United States" in 1/10
+
+save PS33STAT.dta, replace
+
+merge 1:1 year using PS31merge.dta, generate(merge2)
+save PS32merge.dta, replace //merget the three datasets
+
+pwd
+browse //to see if anything goes wrong
+
+*digital economy data
+use "https://docs.google.com/uc?id=1gOR0IIcKcgvCrnX4fJ7nU54LoRaO_W0q&export=download", clear
+
+drop A C
+drop N O P Q // I only want to keep the data from 2006 to 2015
+misstable sum
+
+rename B digEco
+label var digEco "Digital Economy"
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace digEco=strtoname(digEco)
+edit
+reshape long yr, i(digEco) j(year)
+replace digEco=substr(digEco,4,.)
+reshape wide yr, i(year) j(digEco) string
+
+destring *, replace // to destring and display its complete observations
+sum 
+
+save PS34BEA.dta, replace
+
+use PS34BEA.dta, clear
+merge 1:1 year using PS32merge.dta, generate(merge3)
+
+save PS33merge.dta, replace
+
+browse // to double check
+
+*IMF data
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "United States"
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36
+drop in 42/43
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS35IMF, replace
+
+use PS35IMF.dta, clear
+merge 1:1 year using PS33merge.dta, generate(merge4)
+
+save PS34merge.dta, replace
+
+browse // to double check this merging work
+
+*UN data
+use "https://docs.google.com/uc?id=1ycbwIr_OHlUw0O6nKHxGLpDq_-OYw7CB&export=download", clear
+
+keep if CountryArea_Name == "USA"
+drop if Year < 2006 //only need the data from 2006 to 2015
+drop if Tradeflow ~= "Imports"
+drop AdditionalExplanation
+rename Tradeflow TFIM
+label var TFIM "Tradeflow for Imports"
+rename CountryArea_Name country
+rename Country_Code countrycode
+rename CTaso~172017 CTasoIM
+rename TTaso~172017 TTasoIM
+rename TTSta~172017 TTStaIM
+rename Differencein DiffIM
+rename Year year //to prepare for the merging work
+replace country = "United States" in 1/10
+misstable nested // to spot the missing values
+
+save PS36UN1, replace // to save the UN data with the variable "Imports"
+
+use "https://docs.google.com/uc?id=1ycbwIr_OHlUw0O6nKHxGLpDq_-OYw7CB&export=download", clear
+
+keep if CountryArea_Name == "USA"
+drop if Year < 2006 //only need the data from 2006 to 2015
+drop if Tradeflow ~= "Exports"
+drop AdditionalExplanation
+rename Tradeflow TFEX
+label var TFEX "Tradeflow for Exports"
+rename CTaso~172017 CTasoEX
+rename TTaso~172017 TTasoEX
+rename TTSta~172017 TTStaEX
+rename Differencein DiffEX
+rename CountryArea_Name country
+rename Country_Code countrycode
+rename Year year //to prepare for the merging work
+replace country = "United States" in 1/10
+misstable nested // to spot the missing values
+
+save PS36UN2, replace // to save the UN data with the variable "Exports"
+
+use PS36UN2, clear
+merge 1:1 year using PS36UN1.dta, generate(merge5)
+
+misstable nested // to spot the missing values
+sum
+
+save PS36UN, replace
+
+use PS36UN, clear 
+merge 1:1 year using PS34merge.dta, generate(merge6) force
+
+save PS35merge, replace
+
+browse // to double check this merging work
+
+*WHO data
+use "https://docs.google.com/uc?id=1memy_R9VS11DTM0mnDTyzTl06G_ZjaX1&export=download", clear
+
+drop C //ucnecessary information
+drop in 1/2
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "currentgov" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Current Health Expenditure (CHE)*")
+replace Indicators = "Govgross" if strmatch(Indicators,"*as % Gross Domestic Product*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*as % General Government Expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*(GGHE-D) per Capita in US*")
+replace Indicators = "pppexp" if strmatch(Indicators,"*(GGHE-D) per Capita in PPP*")
+replace Indicators = "Expdomestic_usd" if strmatch(Indicators,"*(PVT-D) per Capita in US*")
+replace Indicators = "GFA_current" if strmatch(Indicators,"*Government Financing Arrangements (GFA) as % of Currrent Health Expenditure (CHE)*")
+replace Indicators = "CHE_overall" if strmatch(Indicators,"*Current Health Expenditure (CHE)*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS37WHO, replace
+
+use PS37WHO, clear
+merge 1:1 year using PS35merge.dta, generate(merge7)
+
+save PS36merge, replace
+
+compress
+order country year // to make the whole dataset look nice
+
+browse // to double check the final merging work
+
+/* the result of the final merging work:
+merge 1:1 year using PS35merge.dta, generate(merge7)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                10  (merge7==3)
+    ----------------------------------------- 
+*/
+
+log close
+
+clear
+exit
