@@ -8,7 +8,7 @@ Preamble: this file pulls down seven datasets: 1) a list of important informatio
 on US economy; 2) information on national income and savings of the United States; 
 3) union memerbership and employment in the United States; 4) digital economy gross output
 by component; 5) US economic outlook data; 6) US health expenditure data; 7) exports and 
-import data of the United States
+imports data of the United States
 
 In order to answer the following research questions:
 1) What factors have an effect on US economy performance?
