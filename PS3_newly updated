@@ -224,8 +224,8 @@ use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=down
 keep if Country == "United States"
 keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
 
-drop in 35/36
-drop in 42/43
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
 drop Scale
 drop Country
 drop Units
@@ -396,6 +396,8 @@ merge 1:1 year using PS35merge.dta, generate(merge7)
 */
 
 log close
+
+//missing merge 1:m or m:1
 
 clear
 exit
