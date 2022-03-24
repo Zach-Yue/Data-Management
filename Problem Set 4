@@ -7,8 +7,8 @@
 
 For Problem Set 4 I began to work on my final project by organizing and simplifying 
 my existing work. I also began to see a clearer picture about the impact of economic 
-performance on health expenditure from the lens of the US government through 
-descriptive statistics. 
+performance on health expenditure and the impact of government policy on health expenditure
+through descriptive statistics. 
 
 Research questions include the following ones:
 (1) Which factors coming from the government influence domestic health expenditure?
@@ -495,16 +495,14 @@ caption("https://apps.who.int/nha/database/ViewData/Indicators/en") ///
 saving(g6, replace) /* to get a graph to determine whether there is any relationship 
 between unemployment rate and health expenditure as % of GDP */
 
-graph dir // to locate all the graphs
+graph dir // to locate the current graphs
 
 twoway(connect Heal_Exp_PC year, sort msymbol(D)) ///
 (connect GDP_PC year, msymbol(+)) ///
 (connect GNI_PC year,msymbol(-)) ///
 , legend(rows(3) cols(1) size(small)) scheme(s1mono) // to show the relationship between Health Expenditure per capita and GDP per capita
 
-/******************/
 /* continous vars */
-/******************/
 
 set scheme s2color // to change the scheme back to the s2color
 
@@ -512,11 +510,7 @@ set scheme s2color // to change the scheme back to the s2color
 twoway rcap Heal_Exp_GDP GDP_Growth year, ytitle("HE/GDP & GDP Growth Rate", size(small) place(top))
 twoway area Heal_Exp_GDP GDP_Growth year, legend(cols(1) size(small)) // to see the minimum and maximum
 
-/****************/
-/* distribution */
-/****************/
-
-/*fancy*/
+/* fancy distribution */
 twoway area Heal_Exp_GDP year, horizontal || area GDP_Growth year, horizontal legend(rows(2))
 twoway bar Heal_Exp_GDP year, horizontal || bar GDP_Growth year, horizontal legend(cols(1) size(small)) // to give a clear view of the relationship between the health expenditure as % of GDP and GDP growth rate
 
@@ -576,6 +570,8 @@ title("Relationship between HE per capita and SE/GDP", size(medium)) /// /*mediu
 legend(order(1 "points" 3 "regression line") /// /* I will  lable only 1st and 3rd graph*/
 cols(1) size(small) position(1) ring(0)) /// /*legend in 1 column at 1pm , no distance (within plot)*/
 scheme(s2mono) graphregion(margin(tiny)) plotregion(margin(tiny))
+
+graph dir // to locate all the graphs
 
 /* In summary, government policy has a greater impact on health expenditure than the national economic performance. 
 Even when the GDP growth declines, health expenditure might also increase. */
