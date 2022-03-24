@@ -495,7 +495,7 @@ caption("https://apps.who.int/nha/database/ViewData/Indicators/en") ///
 saving(g4, replace) /* to get a graph to determine whether there is any relationship 
 between unemployment rate and health expenditure as % of GDP */
 
-graph dir // to locate the current graphs
+graph dir // to locate the current graphs that have been saved
 
 twoway(connect Heal_Exp_PC year, sort msymbol(D)) ///
 (connect GDP_PC year, msymbol(+)) ///
@@ -571,7 +571,7 @@ legend(order(1 "points" 3 "regression line") /// /* I will  lable only 1st and 3
 cols(1) size(small) position(1) ring(0)) /// /*legend in 1 column at 1pm , no distance (within plot)*/
 scheme(s2mono) graphregion(margin(tiny)) plotregion(margin(tiny))
 
-graph dir // to locate all the graphs
+*** The End of the Graph Making ***
 
 /* In summary, government policy has a greater impact on health expenditure than the national economic performance. 
 Even when the GDP growth declines, health expenditure might also increase. */
