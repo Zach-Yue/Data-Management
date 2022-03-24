@@ -422,7 +422,6 @@ label var GNI_PC "GNI per capita"
 label var GDP_PC "GDP per capita"
 
 destring *, replace // to change the type of all the variables for the calculations 
-tostring year, replace // I don't want the variable year to become a numerical one
 replace Heal_Exp = Heal_Exp / 1000
 replace GNI = GNI / 1000000000 
 replace Population = Population / 1000 // to make sure they are calculated in trillions
@@ -509,7 +508,8 @@ twoway(connect Heal_Exp_PC year, sort msymbol(D)) ///
 
 set scheme s2color // to change the scheme back to the s2color
 
-twoway rcap Heal_Exp_GDP GDP_Growth year, legend(rows(2))
+/* Maxmium & Minimum */
+twoway rcap Heal_Exp_GDP GDP_Growth year, ytitle("HE/GDP & GDP Growth Rate", size(small) place(top))
 twoway area Heal_Exp_GDP GDP_Growth year, legend(cols(1) size(small)) // to see the minimum and maximum
 
 /****************/
@@ -535,12 +535,13 @@ twoway(line Social_Exp_GDP year, yaxis(1 2) xaxis(1 2))
 (line Heal_Exp_GDP year)
 (line change1 year)
 ,
-ylabel(6(1)20, gmax angle(0))
-ylabel(4(2)16, axis(2) gmin angle(0))
+ylabel(6(2)20, gmax angle(0))
+ylabel(7(1)12, axis(2) gmin angle(0))
 xlabel(2010, axis(2)) 
 title("Difference between Social Expenditure/GDP and Health Expenditure/GDP", size(med))
 subtitle("2006-2015, USA")
 ytitle("Rate(%)", place(top))
+yscale(titlegap(2))
 xtitle("Year", place(right))
 ytitle("",axis(2))
 xtitle("",axis(2))
@@ -561,6 +562,20 @@ twoway(qfitci Heal_Exp Gov_Rev, stdf) (scatter Heal_Exp Gov_Rev)
 twoway(qfitci Heal_Exp Gov_Rev, stdf level(99) color(yellow)) ///
 (qfitci Heal_Exp Gov_Rev, stdf level(90)) ///
 (scatter Heal_Exp Gov_Rev) // to see their relationship under different confidence intervals
+
+tw (scatter Heal_Exp_PC Social_Exp_GDP, mcolor(blue) msymbol(smcircle_hollow)) /// /*blue small circle*  */
+(scatter Heal_Exp_PC Social_Exp_GDP, ///                       
+msize(zero) msymbol(point) mlabel(GDP_Growth)) ///            
+/* help lines*/ ///
+(lfit Heal_Exp_PC Social_Exp_GDP, lcolor(red) lwidth(thick) lpattern(dot)), /// /* red thick dotted line*/                                 
+ytitle("SE/GDP")  ylabel(, labsize(small)) ///  /* have small Y title*/
+yline(4000, lwidth(thick) lpattern(dash) lcolor(gold)) /// /* put horizontal line at 4000*/
+xtitle("Health Expenditure per capita") xlabel(, labsize(small)) /// /*also small X title*/
+title("Relationship between HE per capita and SE/GDP", size(medium)) /// /*medium main title*/
+/* help legend_option*/ ///  
+legend(order(1 "points" 3 "regression line") /// /* I will  lable only 1st and 3rd graph*/
+cols(1) size(small) position(1) ring(0)) /// /*legend in 1 column at 1pm , no distance (within plot)*/
+scheme(s2mono) graphregion(margin(tiny)) plotregion(margin(tiny))
 
 /* In summary, government policy has a greater impact on health expenditure than the national economic performance. 
 Even when the GDP growth declines, health expenditure might also increase. */
