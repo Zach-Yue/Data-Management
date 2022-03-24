@@ -492,7 +492,7 @@ ylabel(4(0.5)9) ymtick(##5) ///
 legend(label(1 "Health Expenditure" "(as of GDP)") label(2 "Unemployment")) ///
 note("Source: WHO") ///
 caption("https://apps.who.int/nha/database/ViewData/Indicators/en") ///
-saving(g6, replace) /* to get a graph to determine whether there is any relationship 
+saving(g4, replace) /* to get a graph to determine whether there is any relationship 
 between unemployment rate and health expenditure as % of GDP */
 
 graph dir // to locate the current graphs
