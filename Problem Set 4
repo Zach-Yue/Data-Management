@@ -1,3 +1,26 @@
+/*
+inspect and tabstat not useful because of the structure of teh data ---esentially it just shows what you see in data table
+
+scatterplot is useful; label data points with year
+
+use line plots!!! always when having time series data use line plots
+
+for time series data dont  do regular regressions; need time series modeling, see
+https://www.google.com/search?q=stata+time+series&rlz=1CAKDZI_enUS997US997&oq=stata+time+series&aqs=chrome..69i57j0i512l9.3249j0j7&sourceid=chrome&ie=UTF-8
+
+and for actual research need more data! cannot really do regressions with 10 obs!
+need way more obs
+
+dotplots are fine and so are bar charts
+
+lineplots are best for these type of data
+
+but yes in general need more data; you have only like 10obs
+
+boxplot not useful, its for distribution and ytiuo dont have any distribution for each year, there is only one obs
+
+*/
+
 *______________________________________________________________________
 * Data Management PS 4 dofile
 * Chengcheng Yue (Zach)---------
