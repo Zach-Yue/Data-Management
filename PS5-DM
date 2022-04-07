@@ -1,0 +1,743 @@
+*______________________________________________________________________
+* Data Management PS 5 dofile
+* Chengcheng Yue (Zach)---------
+  
+/* 
+********************
+
+For Problem Set 5 I began to work on my final project by adding some loops to my 
+previous work. In this project, I want to explore the impact of economic performance on health expenditure and the 
+impact of government policy on health expenditure between the U.S. and China. 
+
+Research questions include the following ones:
+(1) Which factors coming from the government influence domestic health expenditure?
+(2) Does the growth of GDP/GNI directly affect the budget for health expenditure?
+(3) Does government performance or economic performance have the equal impact on health expenditure?
+
+My completed dataset includes data from the following sources:
+
+1- The Global Welfare(GLOW)
+(https://glow.ku.edu.tr/download)
+
+2- The website of the World Bank
+(https://databank.worldbank.org/reports.aspx?source=2&country=USA)
+
+3- A personal website about union data created by two professors
+(https://www.unionstats.com)
+
+4- The Bureau of Economic Analysis of the US Department of Commerce
+(https://www.bea.gov/data/special-topics/digital-economy)
+
+5- The International Monetary Fund
+(https://www.imf.org/en/Publications/WEO/weo-database/2021/October/download-entire-database)
+
+6- The World Health Organization 
+(https://apps.who.int/nha/database/ViewData/Indicators/en)
+
+7- The United Nations
+(https://unstats.un.org/unsd/trade/data/tables.asp#historical)
+
+********************
+*/
+
+*----------------------------
+
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+
+clear         
+set matsize 1000 // Sets the maximum number of variables to specific amount, default is 400
+version 17.0
+set more off
+cap log close  // capture is cool--it supresses error :)
+log using mylog5.log, text replace
+dis "Problem Set 5 for Data Management"
+
+***********************
+** The United States **
+***********************
+
+*GLOW data
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 59 //I only want to keep the data of the United States
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+pwd
+
+sum V241
+recode V241 (min/1.9 =1) (1.9/2.4 =2) (2.4/max =3), gen(GDP_V241)
+list V241 GDP_V241 in 1/10, sepby(GDP_V241)
+
+bys V271: egen avgGDP=mean(V241)
+
+sort year //to rearrange this variable in ascending order 
+
+egen avg_FDI = mean(V230)
+egen med_FDI = median(V230)
+gen dev_FDI = V230-avg_FDI
+egen s_FDI = std(V230) //to calculate some group statistics
+
+replace V262 = int(V262)
+replace V265 = int(V265)
+egen diff = diff(V265 V262)
+sort diff
+list V265 diff V262 in 1/10
+
+save PS31GLOW, replace
+
+*WB data
+use "https://docs.google.com/uc?id=1hV1JsOdL7JdP30tvYYeHOdeav0Tf_gUL&export=download", clear
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+drop in 1 //only need the data from 2006 to 2015
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS32WB.dta, replace
+
+use PS32WB.dta, clear
+merge 1:1 year using PS31GLOW.dta, generate(merge1) //merge the two datasets
+
+save PS31merge.dta, replace
+
+browse //to see if anything goes wrong
+
+*stats website data
+use "https://docs.google.com/uc?id=12LB33i7vnc3lmboC7PFDeeKTPFPuTpUi&export=download", clear
+
+drop in 51/62 //delete the unnecessary part of the dataset
+destring Year, generate (year)
+drop if year >= 2016
+drop if year <= 2005 //only keep the data from 2006 to 2015
+misstable tree year //make sure there is no missing year value
+list 
+
+rename Year country
+replace country = "United States" in 1/10
+
+save PS33STAT.dta, replace
+
+use PS33STAT.dta, clear
+merge 1:1 year using PS31merge.dta, generate(merge2)
+
+save PS32merge.dta, replace //merget the three datasets
+
+pwd
+browse //to see if anything goes wrong
+
+*digital economy data
+use "https://docs.google.com/uc?id=1gOR0IIcKcgvCrnX4fJ7nU54LoRaO_W0q&export=download", clear
+
+drop A C
+drop N O P Q // I only want to keep the data from 2006 to 2015
+misstable sum
+
+rename B digEco
+label var digEco "Digital Economy"
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace digEco=strtoname(digEco)
+edit
+reshape long yr, i(digEco) j(year)
+replace digEco=substr(digEco,4,.)
+reshape wide yr, i(year) j(digEco) string
+
+destring *, replace // to destring and display its complete observations
+sum 
+
+save PS34BEA.dta, replace
+
+use PS34BEA.dta, clear
+merge 1:1 year using PS32merge.dta, generate(merge3)
+
+save PS33merge.dta, replace
+
+browse // to double check
+
+*IMF data
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "United States"
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS35IMF, replace
+
+use PS35IMF.dta, clear
+merge 1:1 year using PS33merge.dta, generate(merge4)
+
+save PS34merge.dta, replace
+
+browse // to double check this merging work
+
+*UN data
+use "https://docs.google.com/uc?id=1ycbwIr_OHlUw0O6nKHxGLpDq_-OYw7CB&export=download", clear
+
+keep if CountryArea_Name == "USA"
+drop if Year < 2006 //only need the data from 2006 to 2015
+drop if Tradeflow ~= "Imports"
+drop AdditionalExplanation
+rename Tradeflow TFIM
+label var TFIM "Tradeflow for Imports"
+rename CountryArea_Name country
+rename Country_Code countrycode
+rename CTaso~172017 CTasoIM
+rename TTaso~172017 TTasoIM
+rename TTSta~172017 TTStaIM
+rename Differencein DiffIM
+rename Year year //to prepare for the merging work
+replace country = "United States" in 1/10
+misstable nested // to spot the missing values
+
+save PS36UN1, replace // to save the UN data with the variable "Imports"
+
+use "https://docs.google.com/uc?id=1ycbwIr_OHlUw0O6nKHxGLpDq_-OYw7CB&export=download", clear
+
+keep if CountryArea_Name == "USA"
+drop if Year < 2006 //only need the data from 2006 to 2015
+drop if Tradeflow ~= "Exports"
+drop AdditionalExplanation
+rename Tradeflow TFEX
+label var TFEX "Tradeflow for Exports"
+rename CTaso~172017 CTasoEX
+rename TTaso~172017 TTasoEX
+rename TTSta~172017 TTStaEX
+rename Differencein DiffEX
+rename CountryArea_Name country
+rename Country_Code countrycode
+rename Year year //to prepare for the merging work
+replace country = "United States" in 1/10
+misstable nested // to spot the missing values
+
+save PS36UN2, replace // to save the UN data with the variable "Exports"
+
+use PS36UN2, clear
+merge 1:1 year using PS36UN1.dta, generate(merge5)
+
+misstable nested // to spot the missing values
+sum
+
+save PS36UN, replace
+
+use PS36UN, clear 
+merge 1:1 year using PS34merge.dta, generate(merge6) force
+
+compress
+
+save PS35merge, replace
+
+browse // to double check this merging work
+
+*WHO data
+use "https://docs.google.com/uc?id=1memy_R9VS11DTM0mnDTyzTl06G_ZjaX1&export=download", clear
+
+drop C //ucnecessary information
+drop in 1/2
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "currentgov" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Current Health Expenditure (CHE)*")
+replace Indicators = "Govgross" if strmatch(Indicators,"*as % Gross Domestic Product*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*as % General Government Expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*(GGHE-D) per Capita in US*")
+replace Indicators = "pppexp" if strmatch(Indicators,"*(GGHE-D) per Capita in PPP*")
+replace Indicators = "Expdomestic_usd" if strmatch(Indicators,"*(PVT-D) per Capita in US*")
+replace Indicators = "GFA_current" if strmatch(Indicators,"*Government Financing Arrangements (GFA) as % of Currrent Health Expenditure (CHE)*")
+replace Indicators = "CHE_overall" if strmatch(Indicators,"*Current Health Expenditure (CHE)*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS37WHO, replace
+
+use PS37WHO, clear
+merge 1:1 year using PS35merge.dta, generate(merge7)
+
+save PS36merge, replace
+
+compress
+order country year // to make the whole dataset look nice
+
+use PS36merge, clear
+
+keep country year yrGGHE_Domestic yrGovgross yrusdexp yrNGDP_R yrLP yrGGR yrGGX ///
+yrGGXWDG V102 V241 ///
+V242 V254 // only keep the variables that are related to my research questions
+
+rename yrGovgross Heal_Exp_GDP
+rename yrusdexp Heal_Exp_PC
+rename yrGGHE_Domestic Heal_Exp
+rename yrNGDP_R GDP
+rename yrLP Population
+rename yrGGR Gov_Rev
+rename yrGGX Gov_Exp
+rename yrGGXWDG Gov_Debt
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Goverment Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The total population in the US"
+label var Gov_Rev "General Government Revenue"
+label var Gov_Exp "General Government Total Expenditure"
+label var Gov_Debt "General Government Growth Debt"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+save PS4DM, replace
+
+***********
+** China **
+***********
+
+*GLOW Data
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 10 //I only want to keep the data of China
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+
+save PS51GLOW, replace
+
+*WB
+use "https://docs.google.com/uc?id=1iyv2Z3zsyBoQm1LBd6TjHg6Q2bjKR6Lw&export=download", clear
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS52WB.dta, replace
+use PS52WB.dta, clear
+merge 1:1 year using PS51GLOW.dta, generate(merge51)
+
+save PS51merge.dta, replace
+
+*IMF data
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "China"
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS53IMF, replace
+use PS53IMF.dta, clear
+merge 1:1 year using PS51merge.dta, generate(merge52)
+
+save PS52merge.dta, replace
+
+*WHO data
+use "https://docs.google.com/uc?id=1iJ_2mKjH7v3smw2zg8mpvsCX4T-6Fweo&export=download", clear
+
+drop C //ucnecessary information
+drop in 1
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "Govgross" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Gross Domestic Product (GDP)*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*General government expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) per Capita in US$*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS54WHO, replace
+
+use PS54WHO, clear
+merge 1:1 year using PS52merge.dta, generate(merge53)
+
+save PS53merge.dta, replace
+
+use PS53merge, clear
+
+compress
+order country year // to make the whole dataset look nice
+
+keep country year yrGGHE_Domestic yrGovgross yrusdexp yrNGDP_R yrLP yrGGR yrGGX ///
+yrGGXWDG V102 V241 ///
+V242 V254 // only keep the variables that are related to my research questions
+
+rename yrGovgross Heal_Exp_GDP
+rename yrusdexp Heal_Exp_PC
+rename yrGGHE_Domestic Heal_Exp
+rename yrNGDP_R GDP
+rename yrLP Population
+rename yrGGR Gov_Rev
+rename yrGGX Gov_Exp
+rename yrGGXWDG Gov_Debt
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Goverment Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The total population in the US"
+label var Gov_Rev "General Government Revenue"
+label var Gov_Exp "General Government Total Expenditure"
+label var Gov_Debt "General Government Growth Debt"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+save PS5DM, replace // to save the newly cleaned dataset in advance
+
+use PS5DM, clear
+
+use PS5DM.dta, replace
+merge m:m country year using PS4DM.dta, generate(merge54)
+
+save PS55555, replace
+
+misstable sum 
+misstable nested // to check the main variable to see whether they have missing values
+
+drop Social_Exp_GDP 
+drop GNI_PC 
+summarize
+
+destring *, replace // to change the type of all the variables for the calculations
+
+replace Heal_Exp = Heal_Exp / 1000
+replace Population = Population / 1000 // to make sure they are calculated in trillions
+
+save PSFinal, replace
+
+*----------
+** Macros **
+*----------
+
+local notes I will repeat locals and use global in my analysis below
+dis `"`notes'"' // to give a fancy version of notes and explain how I would run the my commands
+
+use PSFinal, clear
+
+summarize Gov_Rev
+return list
+scalar se_Gov_Rev = r(sd)/sqrt(r(N)) // to get the standard error of Government Revenue
+dis "sd(Gov_Rev) =" r(sd)
+dis "se(Gov_Rev) =" se_Gov_Rev
+scalar t_value = r(mean) / se_Gov_Rev /* to test whether the mean of government revenue is
+statistically different from 0 */
+dis t_value
+ttest Gov_Rev=0 // to do the T-Test for our analysis 
+
+scalar dir // to get the list of all the scalars saved 
+
+global Heal_Exp = Heal_Exp / 1000
+dis "$Heal_Exp"(20) // to display the 20th value of variable Heal_Exp
+
+di "the label of the country variable is `:var lab marital'   "
+
+foreach var of varlist * {
+di "the `var' is laballed as `:var lab `var' ' "
+}
+
+codebook year //  examines the variable names, labels, and data to produce a codebook describing the dataset
+di "it takes on some value labels, e.g. for val 1 the val label is `:label year 1' "
+di "... for val 2 the val label is `:label year 2' "
+
+levelsof year,loc(_year) 
+foreach val in `_year'{
+di "... for val `val' the val label is `:label year `val'  ' "
+} // to display the year information 
+
+use PSFinal, clear
+preserve // to save the original data 
+keep country
+duplicates drop 
+sort country
+gen country_new = _n
+list
+tempfile id_data // to state this is a temporary file
+sort country
+save "`id_data'", replace // sava the temporary file 
+restore // I have extracted the info related to country and get my original data back
+sort country year 
+merge country using "`id_data'" // to merge the new id into the original data set
+sort country_new year
+order country country_new year
+list, sepby(country)
+tsset country_new year /*  tsset manages the time-series settings of a dataset. Here I use new id info to describe our data details. */
+xtdes /* xtdescribe describes the participation pattern of cross-sectional time-series (xt) data. */
+
+local ivs Gov_Rev Gov_Exp GDP // to name the two varibles and save the new name by ivs
+reg Heal_Exp `ivs'
+reg Heal_Exp_GDP `ivs' 
+
+ta country,gen(S)
+ta year, gen(Y)
+d
+reg Heal_Exp         Gov_Rev S1 // to run some regression analysis
+reg Heal_Exp         Gov_Rev Gov_Exp S1 
+reg Heal_Exp         Gov_Rev Gov_Exp GDP S1 
+local c S1 Y1 Y2 Y3 Y4 Y5 Y6 // to use the local to make the calculation easier
+reg Heal_Exp         Gov_Rev `c'
+reg Heal_Exp         Gov_Rev Gov_Exp `c'
+reg Heal_Exp         Gov_Rev Gov_Exp GDP `c'
+
+*-----------
+** loops **
+*-----------
+
+use PSFinal, clear
+destring *, replace
+global vars "Heal_Exp Gov_Rev GDP"
+foreach v of varlist $vars{
+	gen ln_`v' = ln(`v')
+	label variable ln_`v' "ln(`v')" 
+} // to get the logarithm of the three variables
+
+
+confirm numeric variable Heal_Exp 
+confirm numeric variable year // help is like assert, very useful 
+         foreach var of varlist *{
+           capture confirm numeric variable `var'
+           if _rc==0 {
+             sum `var', meanonly
+             replace `var'=`var'-r(mean)
+           } 
+           else display as error "`var' is not a numeric variable and cannot be demeaned."
+         }
+sum // the end
+
+ta  Gov_Debt Heal_Exp_PC // for one- and two-way tables of summary statistics
+return list         
+
+reg Heal_Exp_PC Population
+ereturn list /* ereturn list lists the names and values of the macros and scalars stored in e(), and the names and sizes of the matrices stored in e() by the last estimation command. */
+
+reg Heal_Exp_PC Population Gov_Debt
+mat l e(b) // to get the matrix    
+loc Population=_b[Population]
+di `Population'  
+
+** The END **
+
+clear
+exit 
