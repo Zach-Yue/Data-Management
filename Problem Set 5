@@ -618,7 +618,7 @@ misstable sum
 misstable nested // to check the main variable to see whether they have missing values
 
 drop Social_Exp_GDP 
-drop GNI_PC 
+drop GNI_PC // to drop the variables with missing values
 summarize
 
 destring *, replace // to change the type of all the variables for the calculations
@@ -738,6 +738,8 @@ loc Population=_b[Population]
 di `Population'  
 
 ** The END **
+
+log close // to close the log
 
 clear
 exit 
