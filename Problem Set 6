@@ -6,16 +6,18 @@
 
 **** Abstract *****
 The main purpose of this study is to examine the degree to which the Gross Domestic Product (GDP), 
-total population, government revenue, government total expenditure, and government gross debt predict 
-healthcare expenditure (HCE) by making a comparison amongst the United States, China, India, and Canada 
-from 2006 to 2015. This study aims at disclosing robust explanatory variables for health care expenditure
-(HCE) growth. Data collected from the Global Welfare (GLOW), the World Bank (WB), the International Monetary Fund (IMF), 
-and the World Health Organization (WHO) is used to study the relationship between healthcare expenditure (the dependent variable) 
-and several independent variables. Besides, the study also aims at investigating whether HCE and GDP have a long-term relationship 
-across different countries and at measuring the elasticity of HCE from 2006 to 2015. By introducing four regression models, 
-the results of this study support previous academic college performance findings that GDP is the most important determinant of HCE. 
-Besides, it is found through this study that government gross debt and government total expenditure do not play a role in HCE while 
-government revenue can make an impact on HCE.
+total population, government revenue, government total expenditure, and government gross debt 
+predict healthcare expenditure (HCE) by making a comparison amongst the United States, China, 
+India, and Canada from 2006 to 2015. This study aims at disclosing robust explanatory variables 
+for health care expenditure (HCE) growth. Data collected from the Global Welfare (GLOW), the World 
+Bank (WB), the International Monetary Fund (IMF), and the World Health Organization (WHO) is used 
+to study the relationship between healthcare expenditure (the dependent variable) and several 
+independent variables. Besides, the study also aims at investigating whether HCE and GDP have a 
+long-term relationship across different countries and at measuring the elasticity of HCE from 2006 
+to 2015. By introducing four regression models, the results of this study support previous findings 
+that GDP is the most important determinant of HCE. Besides, it is found through this study that 
+government gross debt and government total expenditure do not play a role in HCE while government 
+revenue can make an impact on HCE.
 
 My completed dataset includes data from the following sources:
 
@@ -973,16 +975,19 @@ esttab Model*, order(_cons) b(a2) t(a2) sfmt(a3) nobase label mtitles ///
 esttab Model* using table1.csv, order(_cons) b(a2) t(a2) sfmt(a3) nobase ///
 		label mtitles varwidth(30) stats(N r2 F) csv replace
 		
-/* Through the regression analysis above, we can get the results through the four regression models. 
-In Model 1, it shows that an increase of one percentage point in Gov_Rev_GDP is associated with a 0.21 percentage 
-point increase in Heal_Exp_GDP controlling for other variables. This positive relationship is statistically significant 
-at the p=0.01 level. The relationship between Heal_Exp_GDP and other variable are not statistically significant in this model. 
-All the dependent variables in the rest three models are found to be statistically significant at the p=0.01 or p=0.001 level. 
-In Model 2, it shows that an increase of 1 trillion people can lead to an increase of 268.9 trillion U.S. dollars 
-in Heal_Exp keeping GDP constant. It also shows that an increase of 1 trillion GDP is associated with a 0.096 trillion U.S. dollars 
-in Heal_Exp controlling for Population. In model 3, it shows that if we increase lnGDP by one percent we would expect lnHeal_Exp to 
-increase by 1.62 percent. The estimated coefficient here is also the elasticity. Because the coefficient is greater than one, 
-it is elastic. In Model 4, it shows that one dollar increase in GDP_PC can lead to an increase of 0.078 dollar in Heal_Exp_PC. */
+/* Through the regression analysis above, we can get the results through the four regression 
+models. In Model 1, it shows that an increase of one percentage point in Gov_Rev_GDP is 
+associated with a 0.21 percentage point increase in Heal_Exp_GDP controlling for other variables. 
+This positive relationship is statistically significant at the p=0.01 level. The relationship 
+between Heal_Exp_GDP and other variable are not statistically significant in this model. All the 
+dependent variables in the rest three models are found to be statistically significant at the 
+p=0.01 or p=0.001 level. In Model 2, it shows that an increase of 1 trillion people can lead to 
+an increase of 268.9 trillion U.S. dollars in Heal_Exp keeping GDP constant. It also shows that 
+an increase of 1 trillion GDP is associated with a 0.096 trillion U.S. dollars in Heal_Exp controlling
+for Population. In model 3, it shows that if we increase lnGDP by one percent we would expect 
+lnHeal_Exp to increase by 1.62 percent. The estimated coefficient here is also the elasticity. 
+Because the coefficient is greater than one, it is elastic. In Model 4, it shows that one dollar 
+increase in GDP_PC can lead to an increase of 0.078 dollar in Heal_Exp_PC. */
 
 log close
 
