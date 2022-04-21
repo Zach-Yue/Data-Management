@@ -1,0 +1,990 @@
+******* __________________________ *******
+* Data Management PS 6 dofile
+* -------- Chengcheng Yue (Zach) ---------  
+/* 
+********************
+
+**** Abstract *****
+The main purpose of this study is to examine the degree to which the Gross Domestic Product (GDP), 
+total population, government revenue, government total expenditure, and government gross debt predict 
+healthcare expenditure (HCE) by making a comparison amongst the United States, China, India, and Canada 
+from 2006 to 2015. This study aims at disclosing robust explanatory variables for health care expenditure
+(HCE) growth. Data collected from the Global Welfare (GLOW), the World Bank (WB), the International Monetary Fund (IMF), 
+and the World Health Organization (WHO) is used to study the relationship between healthcare expenditure (the dependent variable) 
+and several independent variables. Besides, the study also aims at investigating whether HCE and GDP have a long-term relationship 
+across different countries and at measuring the elasticity of HCE from 2006 to 2015. By introducing four regression models, 
+the results of this study support previous academic college performance findings that GDP is the most important determinant of HCE. 
+Besides, it is found through this study that government gross debt and government total expenditure do not play a role in HCE while 
+government revenue can make an impact on HCE.
+
+My completed dataset includes data from the following sources:
+
+1- The Global Welfare(GLOW)
+(https://glow.ku.edu.tr/download)
+
+2- The website of the World Bank
+(https://databank.worldbank.org/reports.aspx?source=2&country=USA)
+
+3- The International Monetary Fund
+(https://www.imf.org/en/Publications/WEO/weo-database/2021/October/download-entire-database)
+
+4- The World Health Organization 
+(https://apps.who.int/nha/database/ViewData/Indicators/en)
+
+********************
+*/
+
+*----------------------------
+
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+
+clear         
+set matsize 1000 // Sets the maximum number of variables to specific amount, default is 400
+version 17.0
+set more off
+cap log close  // capture is cool--it supresses error :)
+log using mylog6.log, text replace
+dis "Problem Set 6 for Data Management"
+
+***********************
+** The United States **
+***********************
+
+** GLOW data **
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 59 //I only want to keep the data of the United States
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+pwd
+
+sum V241
+recode V241 (min/1.9 =1) (1.9/2.4 =2) (2.4/max =3), gen(GDP_V241)
+list V241 GDP_V241 in 1/10, sepby(GDP_V241)
+
+bys V271: egen avgGDP=mean(V241)
+
+sort year //to rearrange this variable in ascending order 
+
+egen avg_FDI = mean(V230)
+egen med_FDI = median(V230)
+gen dev_FDI = V230-avg_FDI
+egen s_FDI = std(V230) //to calculate some group statistics
+
+replace V262 = int(V262)
+replace V265 = int(V265)
+egen diff = diff(V265 V262)
+sort diff
+list V265 diff V262 in 1/10
+
+save PS31GLOW, replace
+
+** WB data **
+use "https://docs.google.com/uc?id=1hV1JsOdL7JdP30tvYYeHOdeav0Tf_gUL&export=download", clear
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+drop in 1 //only need the data from 2006 to 2015
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS32WB.dta, replace
+
+use PS32WB.dta, clear
+merge 1:1 year using PS31GLOW.dta, generate(merge31) //merge the two datasets
+
+save PS31merge.dta, replace
+
+browse //to see if anything goes wrong
+
+** IMF data **
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "United States"
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS33IMF, replace
+
+use PS33IMF.dta, clear
+merge 1:1 year using PS31merge.dta, generate(merge32)
+
+save PS32merge.dta, replace
+
+browse // to double check this merging work
+
+** WHO data **
+use "https://docs.google.com/uc?id=1memy_R9VS11DTM0mnDTyzTl06G_ZjaX1&export=download", clear
+
+drop C //ucnecessary information
+drop in 1/2
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "currentgov" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Current Health Expenditure (CHE)*")
+replace Indicators = "Govgross" if strmatch(Indicators,"*as % Gross Domestic Product*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*as % General Government Expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*(GGHE-D) per Capita in US*")
+replace Indicators = "pppexp" if strmatch(Indicators,"*(GGHE-D) per Capita in PPP*")
+replace Indicators = "Expdomestic_usd" if strmatch(Indicators,"*(PVT-D) per Capita in US*")
+replace Indicators = "GFA_current" if strmatch(Indicators,"*Government Financing Arrangements (GFA) as % of Currrent Health Expenditure (CHE)*")
+replace Indicators = "CHE_overall" if strmatch(Indicators,"*Current Health Expenditure (CHE)*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS34WHO, replace
+
+use PS34WHO, clear
+merge 1:1 year using PS32merge.dta, generate(merge33)
+
+save PS33merge, replace
+
+compress
+order country year // to make the whole dataset look nice
+
+use PS33merge, clear
+
+keep country year yrGGHE_Domestic yrGovgross yrusdexp yrNGDPD yrLP yrGGR_NGDP yrGGX_NGDP ///
+yrGGXWDG_NGDP V102 V241 V242 V254 // only keep the variables that are related to my research questions
+
+rename yrGovgross Heal_Exp_GDP
+rename yrusdexp Heal_Exp_PC
+rename yrGGHE_Domestic Heal_Exp
+rename yrNGDPD GDP
+rename yrLP Population
+rename yrGGR_NGDP Gov_Rev_GDP
+rename yrGGX_NGDP Gov_Exp_GDP
+rename yrGGXWDG_NGDP Gov_Debt_GDP
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Government Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The Total Population"
+label var Gov_Rev_GDP "General Government Revenue as % of GDP"
+label var Gov_Exp_GDP "General Government Total Expenditure as % of GDP"
+label var Gov_Debt_GDP "General Government Gross Debt as % of GDP"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+save PS33DM, replace
+
+***********
+** China **
+***********
+
+** GLOW Data **
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 10 //I only want to keep the data of China
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+
+save PS41GLOW, replace
+
+** WB **
+use "https://docs.google.com/uc?id=1iyv2Z3zsyBoQm1LBd6TjHg6Q2bjKR6Lw&export=download", clear
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS42WB.dta, replace
+use PS42WB.dta, clear
+merge 1:1 year using PS41GLOW.dta, generate(merge41)
+
+save PS41merge.dta, replace
+
+** IMF data **
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "China"
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS43IMF, replace
+use PS43IMF.dta, clear
+merge 1:1 year using PS41merge.dta, generate(merge42)
+
+save PS42merge.dta, replace
+
+*WHO data
+use "https://docs.google.com/uc?id=1iJ_2mKjH7v3smw2zg8mpvsCX4T-6Fweo&export=download", clear
+
+drop C //ucnecessary information
+drop in 1
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "Govgross" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Gross Domestic Product (GDP)*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*General government expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) per Capita in US$*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS44WHO, replace
+
+use PS44WHO, clear
+merge 1:1 year using PS42merge.dta, generate(merge43)
+
+save PS43merge.dta, replace
+
+use PS43merge, clear
+
+compress
+order country year // to make the whole dataset look nice
+
+keep country year yrGGHE_Domestic yrGovgross yrusdexp yrNGDPD yrLP yrGGR_NGDP yrGGX_NGDP ///
+yrGGXWDG_NGDP V102 V241 V242 V254 // only keep the variables that are related to my research questions
+
+rename yrGovgross Heal_Exp_GDP
+rename yrusdexp Heal_Exp_PC
+rename yrGGHE_Domestic Heal_Exp
+rename yrNGDPD GDP
+rename yrLP Population
+rename yrGGR_NGDP Gov_Rev_GDP
+rename yrGGX_NGDP Gov_Exp_GDP
+rename yrGGXWDG_NGDP Gov_Debt_GDP
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Government Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The Total Population"
+label var Gov_Rev_GDP "General Government Revenue as % of GDP"
+label var Gov_Exp_GDP "General Government Total Expenditure as % of GDP"
+label var Gov_Debt_GDP "General Government Gross Debt as % of GDP"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+save PS43DM, replace // to save the newly cleaned dataset in advance
+
+use PS43DM, clear
+merge m:m country year using PS33DM.dta, generate(merge44)
+
+save PS44, replace
+
+*************
+*** India ***
+*************
+
+** GLOW data **
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 22 //I only want to keep the data of India
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+
+save PS51GLOW, replace
+
+** WB data **
+
+use "https://docs.google.com/uc?id=1p0o9ilkogzDhgQSu9o647MOMXsUpKjq6&export=download", clear
+
+keep if countryname == "India" 
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS52WB.dta, replace
+use PS52WB.dta, clear
+merge 1:1 year using PS51GLOW.dta, generate(merge51)
+
+save PS51merge.dta, replace
+
+** IMF data **
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "India" // to keep the data of India
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS53IMF, replace
+use PS53IMF.dta, clear
+merge 1:1 year using PS51merge.dta, generate(merge52)
+
+save PS52merge.dta, replace
+
+** WHO data **
+use "https://docs.google.com/uc?id=1szAtzn8pspMBqhlVk8ToC6a5RxXhwJiw&export=download", clear
+
+keep if Countries == "India"
+
+drop C //ucnecessary information
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "Govgross" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Gross Domestic Product (GDP)*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*General government expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) per Capita in US$*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS54WHO, replace
+
+use PS54WHO, clear
+merge 1:1 year using PS52merge.dta, generate(merge53)
+
+save PS53merge.dta, replace
+
+use PS53merge, clear
+
+compress
+order country year // to make the whole dataset look nice
+
+keep country year yrGGHE_Domestic yrGovgross yrusdexp yrNGDPD yrLP yrGGR_NGDP yrGGX_NGDP ///
+yrGGXWDG_NGDP V102 V241 V242 V254 // only keep the variables that are related to my research questions
+
+rename yrGovgross Heal_Exp_GDP
+rename yrusdexp Heal_Exp_PC
+rename yrGGHE_Domestic Heal_Exp
+rename yrNGDPD GDP
+rename yrLP Population
+rename yrGGR_NGDP Gov_Rev_GDP
+rename yrGGX_NGDP Gov_Exp_GDP
+rename yrGGXWDG_NGDP Gov_Debt_GDP
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Government Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The Total Population"
+label var Gov_Rev_GDP "General Government Revenue as % of GDP"
+label var Gov_Exp_GDP "General Government Total Expenditure as % of GDP"
+label var Gov_Debt_GDP "General Government Gross Debt as % of GDP"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+save PS53DM, replace // to save the newly cleaned dataset in advance
+
+use PS53DM, clear
+merge m:m country year using PS44.dta, generate(merge54)
+
+save PS54, replace
+
+**************
+*** Canada ***
+**************
+
+** GLOW data **
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+drop if V3 ~= 8 //I only want to keep the data of Canada
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2 > 1988 & V2 < 2006 //delete all the data from 1989 to 2005 because I only want to keep the data from year 2006 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+
+save PS61GLOW, replace
+
+** WB data **
+use "https://docs.google.com/uc?id=1p0o9ilkogzDhgQSu9o647MOMXsUpKjq6&export=download", clear
+
+keep if countryname == "Canada" // I only want the data of Canada
+
+reshape long yr, i(seriesname)j(year)
+drop seriesname
+replace seriescode=strtoname(seriescode)
+reshape wide yr,i(year)j(seriescode)string /* reshape the dataset to make it fit with my other one */
+
+rename countryname country
+order country countrycode year
+order year, before(countrycode)
+
+sort year //to make sure that the variable year is arranged in ascending order
+
+pwd
+personal
+
+save PS62WB.dta, replace
+
+use PS62WB.dta, clear
+merge 1:1 year using PS61GLOW.dta, generate(merge61)
+
+save PS61merge.dta, replace
+
+** IMF data **
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "Canada"
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AJ AK AL AM AN AO AP AQ AR AS //only need the data from 2006 to 2015
+
+drop in 35/36 //good idea to drop on condition: drop if; not drop in
+drop in 42/43 
+drop Scale
+drop Country
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes
+rename WEOSubject~e subject
+misstable sum
+
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+reshape long yr, i(subject) j(year)
+reshape wide yr, i(year) j(subject)string
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS63IMF, replace
+use PS63IMF.dta, clear
+merge 1:1 year using PS61merge.dta, generate(merge62)
+
+save PS62merge.dta, replace
+
+** WHO data **
+use "https://docs.google.com/uc?id=1szAtzn8pspMBqhlVk8ToC6a5RxXhwJiw&export=download", clear
+
+keep if Countries == "Canada" // only keep the data of Canada
+
+drop C //ucnecessary information
+drop Countries
+
+rename D yr2006
+label var yr2006 "2006[YR2006]"
+rename E yr2007
+label var yr2007 "2007[YR2007]"
+rename F yr2008
+label var yr2008 "2008[YR2008]"
+rename G yr2009
+label var yr2009 "2009[YR2009]"
+rename H yr2010
+label var yr2010 "2010[YR2010]"
+rename I yr2011
+label var yr2011 "2011[YR2011]"
+rename J yr2012
+label var yr2012 "2012[YR2012]"
+rename K yr2013
+label var yr2013 "2013[YR2013]"
+rename L yr2014
+label var yr2014 "2014[YR2014]"
+rename M yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+replace Indicators = "Govgross" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) as % Gross Domestic Product (GDP)*")
+replace Indicators = "generalgov" if strmatch(Indicators,"*General government expenditure*")
+replace Indicators = "usdexp" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D) per Capita in US$*")
+replace Indicators = "GGHE_Domestic" if strmatch(Indicators,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+reshape long yr, i(Indicators) j(year)
+edit
+replace Indicators = strtoname(Indicators)
+reshape wide yr, i(year) j(Indicators) string 
+
+save PS64WHO, replace
+
+use PS64WHO, clear
+merge 1:1 year using PS62merge.dta, generate(merge63)
+
+save PS63merge.dta, replace
+
+use PS63merge, clear
+
+compress
+order country year // to make the whole dataset look nice
+
+keep country year yrGGHE_Domestic yrGovgross yrusdexp yrNGDPD yrLP yrGGR_NGDP yrGGX_NGDP ///
+yrGGXWDG_NGDP V102 V241 V242 V254 // only keep the variables that are related to my research questions
+
+rename yrGovgross Heal_Exp_GDP
+rename yrusdexp Heal_Exp_PC
+rename yrGGHE_Domestic Heal_Exp
+rename yrNGDPD GDP
+rename yrLP Population
+rename yrGGR_NGDP Gov_Rev_GDP
+rename yrGGX_NGDP Gov_Exp_GDP
+rename yrGGXWDG_NGDP Gov_Debt_GDP
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Government Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The Total Population"
+label var Gov_Rev_GDP "General Government Revenue as % of GDP"
+label var Gov_Exp_GDP "General Government Total Expenditure as % of GDP"
+label var Gov_Debt_GDP "General Government Gross Debt as % of GDP"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+save PS63DM, replace // to save the newly cleaned dataset in advance
+
+use PS63DM, clear
+merge m:m country year using PS54.dta, generate(merge64)
+
+save PS64, replace
+
+use PS64, clear
+
+misstable sum 
+misstable nested // to check the main variable to see whether they have missing values
+
+drop Social_Exp_GDP 
+drop GNI_PC // to delete the variables with missing values
+summarize
+
+destring *, replace // to change the type of all the variables for the calculations
+
+replace Heal_Exp = Heal_Exp / 1000
+replace Population = Population / 1000 // to make sure they are calculated in trillions
+
+save PSFinal6, replace
+
+use PSFinal6, clear
+
+sum // to get a summary of descriptive statistics first
+
+summarize Heal_Exp
+return list
+scalar se_Heal_Exp = r(sd)/sqrt(r(N)) // to get the standard error of Government Revenue
+dis "sd(Heal_Exp) =" r(sd)
+dis "se(Heal_Exp) =" se_Heal_Exp
+scalar t_value = r(mean) / se_Heal_Exp /* to test whether the mean of government revenue is
+statistically different from 0 */
+dis t_value
+ttest Gov_Rev=0 // to do the T-Test for our analysis 
+
+codebook year //  examines the variable names, labels, and data to produce a codebook describing the dataset
+di "it takes on some value labels, e.g. for val 1 the val label is `:label year 1' "
+di "... for val 2 the val label is `:label year 2' "
+
+levelsof year,loc(_year) 
+foreach val in `_year'{
+di "... for val `val' the val label is `:label year `val'  ' "
+} // to display the year information 
+
+use PSFinal6, clear
+preserve // to save the original data 
+keep country
+duplicates drop 
+sort country
+gen country_new = _n
+list
+tempfile id_data // to state this is a temporary file
+sort country
+save "`id_data'", replace // sava the temporary file 
+restore // I have extracted the info related to country and get my original data back
+sort country year 
+merge country using "`id_data'" // to merge the new id into the original data set
+sort country_new year
+order country country_new year
+list, sepby(country)
+tsset country_new year /*  tsset manages the time-series settings of a dataset. Here I use new id info to describe our data details. */
+xtdes /* xtdescribe describes the participation pattern of cross-sectional time-series (xt) data. */
+
+gen lnHeal_Exp = ln(Heal_Exp) // to generate the logarithm of the two variables to prepare for further analysis
+gen lnGDP = ln(GDP) // to measure the elasticity for the regression analysis below
+
+tabstat Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth
+tabstat Heal_Exp Population GDP 
+tabstat lnHeal_Exp lnGDP 
+tabstat Heal_Exp_PC GDP_PC // to make tables for different datasets belonging to different models below
+
+graph bar Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth, over(country)
+graph bar Heal_Exp Population GDP, over(country) // to make bar graphs
+
+scatter lnHeal_Exp lnGDP 
+scatter Heal_Exp_PC GDP_PC // to do the scatter plots for the two sets of variables
+
+reg Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth
+estimates store Model_1
+
+reg Heal_Exp Population GDP 
+estimates store Model_2
+
+reg lnHeal_Exp lnGDP 
+estimates store Model_3
+
+reg Heal_Exp_PC GDP_PC
+estimates store Model_4
+
+estimates table Model*, bfmt(%7.4f) t stats(N r2) 
+esttab Model*, order(_cons) b(a2) t(a2) sfmt(a3) nobase label mtitles ///
+		varwidth(30) stats(N r2 F)	
+esttab Model* using table1.csv, order(_cons) b(a2) t(a2) sfmt(a3) nobase ///
+		label mtitles varwidth(30) stats(N r2 F) csv replace
+		
+/* Through the regression analysis above, we can get the results through the four regression models. 
+In Model 1, it shows that an increase of one percentage point in Gov_Rev_GDP is associated with a 0.21 percentage 
+point increase in Heal_Exp_GDP controlling for other variables. This positive relationship is statistically significant 
+at the p=0.01 level. The relationship between Heal_Exp_GDP and other variable are not statistically significant in this model. 
+All the dependent variables in the rest three models are found to be statistically significant at the p=0.01 or p=0.001 level. 
+In Model 2, it shows that an increase of 1 trillion people can lead to an increase of 268.9 trillion U.S. dollars 
+in Heal_Exp keeping GDP constant. It also shows that an increase of 1 trillion GDP is associated with a 0.096 trillion U.S. dollars 
+in Heal_Exp controlling for Population. In model 3, it shows that if we increase lnGDP by one percent we would expect lnHeal_Exp to 
+increase by 1.62 percent. The estimated coefficient here is also the elasticity. Because the coefficient is greater than one, 
+it is elastic. In Model 4, it shows that one dollar increase in GDP_PC can lead to an increase of 0.078 dollar in Heal_Exp_PC. */
+
+log close
+
+clear 
+exit
