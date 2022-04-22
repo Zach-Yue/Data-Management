@@ -54,7 +54,12 @@ dis "Problem Set 6 for Data Management"
 ** The United States **
 ***********************
 
-** GLOW data **
+** GLOW data ** //keep more obs! cannot do anything useful with 10obs! keep like 100 or more; same for other datasets
+//say you want to do US only, ok, but then keep say 50 years of data 1970-2020; or if just 10yrs, then have like 10 countries; so ok, then you have china 10 obs; 
+//but should have all that from start! get GLOW, WB, etc, all the datasets for the whol eworld, full datasets, and then say retain like 10 countres in one dataset
+//as opposed to downloading each for each country separately as you do now--it doesnt make sense
+//and yiou need wayt more descriptive stats, esp graphs
+
 use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
 
 d 
