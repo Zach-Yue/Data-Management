@@ -1,0 +1,824 @@
+******* __________________________ *******
+* Data Management PS Final dofile
+* -------- Chengcheng Yue (Zach) ---------  
+/* 
+********************
+
+**** Abstract *****
+The main purpose of this study is to examine the degree to which the Gross Domestic Product (GDP), 
+total population, government revenue, government total expenditure, and government gross debt 
+predict healthcare expenditure (HCE) by making a comparison amongst the OECD-Europe countries
+from 2000 to 2015. This study aims at disclosing robust explanatory variables for health care 
+expenditure (HCE) growth. Data collected from the Global Welfare (GLOW), the World Bank (WB), 
+the International Monetary Fund (IMF), the World Health Organization (WHO), the Organisation 
+for Economic Co-operation and Development (OECD), and Our World in Data is used to 
+study the relationship between healthcare expenditure (the dependent variable) and several 
+independent variables. Besides, the study also aims at investigating whether HCE and GDP have a 
+long-term relationship across different countries and at measuring the elasticity of HCE from 1990 
+to 2015. By introducing four regression models, the results of this study support previous findings 
+that GDP is the most important determinant of HCE. Besides, it is found through this study that 
+government gross debt and government total expenditure do not play a role in HCE while government 
+revenue can make an impact on HCE.
+
+My completed dataset includes data from the following sources:
+
+1- The Global Welfare(GLOW)
+(https://glow.ku.edu.tr/download)
+
+2- The website of the World Bank
+(https://databank.worldbank.org/reports.aspx?source=2&country=USA)
+
+3- The International Monetary Fund
+(https://www.imf.org/en/Publications/WEO/weo-database/2021/October/download-entire-database)
+
+4- The World Health Organization 
+(https://apps.who.int/nha/database/ViewData/Indicators/en)
+
+5- The Organisation for Economic Co-operation and Development
+(https://data.oecd.org/healthres/health-spending.htm)
+
+6- Our World in Data by Oxford Martin School
+(https://ourworldindata.org/grapher/public-health-expenditure-share-gdp-owid)
+
+********************
+*/
+
+*----------------------------
+
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt----------------------------------------------
+
+clear         
+set matsize 1000 // Sets the maximum number of variables to specific amount, default is 400
+version 17.0
+set more off
+cap log close  // capture is cool--it supresses error :)
+log using MylogFinal.log, text replace
+dis "Problem Set Final for Data Management"
+
+***************
+** Glow Data **
+***************
+
+use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
+
+d 
+summarize
+
+keep if V3==3 | V3==5 | V3==12 | V3==13 | V3==15 | V3==16 | V3==17 | V3==18 | V3==19 ///
+| V3==20 | V3==21 | V3==25 | V3==27 | V3==31 | V3==35 | V3==38 | V3==43 | V3==44 ///
+| V3==49 | V3==51 | V3==52 | V3==53 | V3==55 | V3==58 // I only want the data of OECD-Europe countries
+
+drop V4 V4a /* I don't know what these variables mean so I need to drop them */
+drop V10-V100
+drop V103-V206
+drop V275-V373 //only keep the variables related to the economic performance
+
+drop if V2<2000 //delete all the data in 1989 because I only want to keep the data from year 2000 to 2015
+drop V8 V9
+drop V215-V226 
+drop V268 V269 //to delete all the columns with plenty of missing values 
+summarize
+
+misstable summarize
+misstable pattern //to locate the missing values 
+
+rename V1 country
+rename V2 year
+rename V3 ID //to make these variables look clear 
+
+format V209-V214 %10.1f //decide how many decimals I want to look at for this variable
+sum V209 V210 V211 V212 V213 V214, format
+sum V209 V210 V211 V212 V213 V214, detail
+codebook V209-V214 /* examine the variable names, labels, and data */
+
+order V5 V5a V6 V7
+order V7, before(V6)
+order V6, before(V5a) //relocate variables
+pwd
+
+sum V241
+recode V241 (min/1.9 =1) (1.9/2.4 =2) (2.4/max =3), gen(GDP_V241)
+list V241 GDP_V241 in 1/10, sepby(GDP_V241)
+
+bys V271: egen avgGDP=mean(V241)
+
+sort year //to rearrange this variable in ascending order 
+
+egen avg_FDI = mean(V230)
+egen med_FDI = median(V230)
+gen dev_FDI = V230-avg_FDI
+egen s_FDI = std(V230) //to calculate some group statistics
+
+replace V262 = int(V262)
+replace V265 = int(V265)
+egen diff = diff(V265 V262)
+sort diff
+list V265 diff V262 in 1/10
+
+sort country // to give all the values in this variable an alphabetical order 
+
+save PS71GLOW, replace
+
+*************
+** WB data **
+*************
+
+use "https://docs.google.com/uc?id=1DRn5ZqE7mgC79Me2LEoAXiYxI5Q7m_eS&export=download", clear
+
+keep if countryname == "Austria" | countryname == "Belgium" | countryname == "Czech Republic" ///
+| countryname == "Denmark" | countryname == "Estonia" | countryname == "Finland" | countryname == "France" ///
+| countryname == "Germany" | countryname == "Greece" | countryname == "Hungary" | countryname == "Iceland" ///
+| countryname == "Ireland" | countryname == "Italy" | countryname == "Luxembourg" ///
+| countryname == "Netherlands" | countryname == "Norway" | countryname == "Poland" ///
+| countryname == "Portugal" | countryname == "Slovenia" ///
+| countryname == "Spain" | countryname == "Sweden" | countryname == "Switzerland" ///
+| countryname == "Turkey" | countryname == "United Kingdom" /* I only want to keep the OECD-Europe countries */
+
+foreach x of varlist yr* {
+	replace `x' = "." if `x' == ".."
+} // use the loop the replace all the ".." in the data with "."
+
+misstable pattern, bypat // to see if there are any missing values
+
+drop yr1990-yr1999 // I only want the data from 2000 to 2015
+
+gen id = _n
+order id
+
+reshape long yr, i(id)j(year) // reshape from long to wide 
+
+replace seriescode=strtoname(seriescode) 
+
+encode seriescode, gen(seriescode1)
+label save seriescode1 using varname1, replace
+
+egen id2 = group(countryname year)
+move id2 year
+drop id 
+drop seriescode 
+drop seriesname
+
+reshape wide yr, i(id2)j(seriescode1) // reshape from wide to long 
+order id2 countryname year yr1 yr2 yr3 
+
+label variable yr1 `"GNI (constant 2015 US$)"'
+label variable yr2 `"GNI growth (annual %)"'
+label variable yr3 `"GNI per capita (constant 2015 US$)"' // to label the new variables
+
+drop id2 
+
+rename countryname country 
+rename yr1 NY_GNP_MKTP_KD
+rename yr2 NY_GNP_MKTP_KD_ZG
+rename yr3 NY_GNP_PCAP_KD // to rename the variables and make them make sense for later use
+
+pwd 
+personal // to cheak the location of my file 
+
+save PS72WB.dta, replace
+
+use PS72WB, clear
+merge m:m country year using PS71GLOW, generate(merge71) // to merge the two data sets
+
+save PS71merge.dta, replace // the first merging work
+
+browse // to see if anything goes wrong 
+
+**************
+** IMF Data **
+**************
+
+use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
+
+keep if Country == "Austria" | Country == "Belgium" | Country == "Czech Republic" ///
+| Country == "Denmark" | Country == "Estonia" | Country == "Finland" | Country == "France" ///
+| Country == "Germany" | Country == "Greece" | Country == "Hungary" | Country == "Iceland" ///
+| Country == "Ireland" | Country == "Italy" | Country == "Luxembourg" ///
+| Country == "Netherlands" | Country == "Norway" | Country == "Poland" ///
+| Country == "Portugal" | Country == "Slovenia" ///
+| Country == "Spain" | Country == "Sweden" | Country == "Switzerland" | Country == "Turkey" ///
+| Country == "United Kingdom" // I only want to keep the OECD-Europe countries
+
+keep WEOSubject~e Country SubjectDescriptor SubjectNotes Units Scale AD AE AF AG AH AI ///
+AJ AK AL AM AN AO AP AQ AR AS // I only need the data from 2006 to 2015
+
+drop Scale
+drop Units
+drop SubjectDescriptor
+drop SubjectNotes // to only keep all the variables related to my study
+
+misstable sum // to check the data
+
+rename WEOSubject~e subject 
+rename Country country
+rename AD yr2000
+label var yr2000 "2000[YR2000]"
+rename AE yr2001
+label var yr2001 "2001[YR2001]"
+rename AF yr2002
+label var yr2002 "2002[YR2002]"
+rename AG yr2003
+label var yr2003 "200[YR2003]"
+rename AH yr2004
+label var yr2004 "2004[YR2004]"
+rename AI yr2005
+label var yr2005 "2005[YR2005]"
+rename AJ yr2006
+label var yr2006 "2006[YR2006]"
+rename AK yr2007
+label var yr2007 "2007[YR2007]"
+rename AL yr2008
+label var yr2008 "2008[YR2008]"
+rename AM yr2009
+label var yr2009 "2009[YR2009]"
+rename AN yr2010
+label var yr2010 "2010[YR2010]"
+rename AO yr2011
+label var yr2011 "2011[YR2011]"
+rename AP yr2012
+label var yr2012 "2012[YR2012]"
+rename AQ yr2013
+label var yr2013 "2013[YR2013]"
+rename AR yr2014
+label var yr2014 "2014[YR2014]"
+rename AS yr2015
+label var yr2015 "2015[YR2015]" /* rename and label the variables to prepare for the reshaping work */
+
+gen id = _n
+order id
+
+reshape long yr, i(id)j(year) // reshape from long to wide 
+
+encode subject, gen(subject1)
+label save subject1 using varname2, replace
+
+egen id2 = group(country year)
+move id2 year
+drop id 
+drop subject
+
+reshape wide yr, i(id2)j(subject1) // reshape again from wide to long 
+order id2 country year yr*
+
+rename yr1 BCA
+rename yr2 BCA_NGDPD
+rename yr3 FLIBOR6
+rename yr4 GGR
+rename yr5 GGR_NGDP
+rename yr6 GGSB
+rename yr7 GGSB_NPGDP
+rename yr8 GGX
+rename yr9 GGXCNL
+rename yr10 GGXCNL_NGDP
+rename yr11 GGXONLB
+rename yr12 GGXONLB_NGDP
+rename yr13 GGXWDG
+rename yr14 GGXWDG_NGDP
+rename yr15 GGXWDN
+rename yr16 GGXWDN_NGDP
+rename yr17 GGX_NGDP
+rename yr18 LE
+rename yr19 LP
+rename yr20 LUR
+rename yr21 NGAP_NPGDP
+rename yr22 NGDP
+rename yr23 NGDPD
+rename yr24 NGDPDPC
+rename yr25 NGDPPC
+rename yr26 NGDPRPC
+rename yr27 NGDPRPPPPC
+rename yr28 NGDP_D
+rename yr29 NGDP_FY
+rename yr30 NGDP_R
+rename yr31 NGDP_RPCH
+rename yr32 NGSD_NGDP
+rename yr33 NID_NGDP
+rename yr34 PCPI
+rename yr35 PCPIE
+rename yr36 PCPIEPCH
+rename yr37 PCPIPCH
+rename yr38 PPPEX
+rename yr39 PPPGDP
+rename yr40 PPPPC
+rename yr41 PPPSH
+rename yr42 TMG_RPCH
+rename yr43 TM_RPCH
+rename yr44 TXG_RPCH
+rename yr45 TX_RPCH
+
+drop id2
+
+destring *, replace // to destring this variable to display its complete observations
+summarize
+
+save PS73IMF, replace
+
+use PS73IMF.dta, clear
+merge m:m country year using PS71merge.dta, generate(merge72) // the second merging work
+
+save PS72merge.dta, replace
+
+browse // to double check this merging work
+
+**************
+** WHO Data **
+**************
+
+use "https://docs.google.com/uc?id=1FLtvsvsq_i132iDZxH9xnEghQuPS0nhO&export=download", clear
+
+drop C // it is the ucnecessary information
+drop in 1 // unnecessary information
+drop T-W // only keep the data from 2000 to 2015
+
+keep if Countries == "Austria" | Countries == "Belgium" | Countries == "Czech Republic" ///
+| Countries == "Denmark" | Countries == "Estonia" | Countries == "Finland" | Countries == "France" ///
+| Countries == "Germany" | Countries == "Greece" | Countries == "Hungary" | Countries == "Iceland" ///
+| Countries == "Ireland" | Countries == "Italy" | Countries == "Luxembourg" ///
+| Countries == "Netherlands" | Countries == "Norway" | Countries == "Poland" ///
+| Countries == "Portugal" | Countries == "Slovenia" ///
+| Countries == "Spain" | Countries == "Sweden" | Countries == "Switzerland" | Countries == "Turkey" ///
+| Countries == "United Kingdom" // I only want to keep the OECD-Europe countries
+
+rename D yr2000
+label var yr2000 "2000[YR2000]"
+rename E yr2001
+label var yr2001 "2001[YR2001]"
+rename F yr2002
+label var yr2002 "2002[YR2002]"
+rename G yr2003
+label var yr2003 "2003[YR2003]"
+rename H yr2004
+label var yr2004 "2004[YR2004]"
+rename I yr2005
+label var yr2005 "2005[YR2005]"
+rename J yr2006
+label var yr2006 "2006[YR2006]"
+rename K yr2007
+label var yr2007 "2007[YR2007]"
+rename L yr2008
+label var yr2008 "2008[YR2008]"
+rename M yr2009
+label var yr2009 "2009[YR2009]"
+rename N yr2010
+label var yr2010 "2010[YR2010]"
+rename O yr2011
+label var yr2011 "2011[YR2011]"
+rename P yr2012
+label var yr2012 "2012[YR2012]"
+rename Q yr2013
+label var yr2013 "2013[YR2013]"
+rename R yr2014
+label var yr2014 "2014[YR2014]"
+rename S yr2015
+label var yr2015 "2015[YR2015]" 
+rename Countries country
+rename Indicators indicator /* rename and label the key variables to prepare for the reshaping work */
+
+replace indicator = "Govgross" if strmatch(indicator,"*Domestic General Government Health Expenditure (GGHE-D) as % Gross Domestic Product (GDP)*")
+replace indicator = "generalgov" if strmatch(indicator ,"*General government expenditure*")
+replace indicator = "usdexp" if strmatch(indicator,"*Domestic General Government Health Expenditure (GGHE-D) per Capita in US$*")
+replace indicator = "GGHE_Domestic" if strmatch(indicator,"*Domestic General Government Health Expenditure (GGHE-D)*")
+
+compress // to shorten the spaces in the values
+
+gen id = _n
+order id
+
+reshape long yr, i(id)j(year) // reshape from long to wide 
+
+encode indicator, gen(indicator1)
+label save indicator1 using varname3, replace
+
+egen id2 = group(country year)
+move id2 year
+drop id 
+drop indicator
+
+reshape wide yr, i(id2)j(indicator1) // reshape again from wide to long 
+order id2 country year yr*
+
+rename yr1 GGHE_Domestic
+rename yr2 Govgross
+rename yr3 generalgov
+rename yr4 usdexp
+
+drop id2
+
+save PS74WHO, replace // to save this dataset
+
+use PS74WHO, clear
+merge m:m country year using PS72merge.dta, generate(merge73) // the third merging work
+
+save PS73merge, replace
+
+***************
+** OECD Data **
+***************
+
+use "https://docs.google.com/uc?id=1bSVE7BEeDGJ8LvXPf3SPg6WQgGuYyUFC&export=download", clear
+
+keep if time>1999 & time<2016 // to only keep the data from 2000 to 2015
+drop frequency
+drop flagcodes 
+drop indicator 
+
+rename location country
+rename time year
+
+keep if country == "AUT" | country == "BEL" | country == "CZE" ///
+| country == "DNK" | country == "EST" | country == "FIN" | country == "FRA" ///
+| country == "DEU" | country == "GRC" | country == "HUN" | country == "ISL" ///
+| country == "IRL" | country == "ITA" | country == "LUX" ///
+| country == "NLD" | country == "NOR" | country == "POL" ///
+| country == "PRT" | country == "SVN" | country == "ESP" ///
+| country == "SWE" | country == "CHE" | country == "TUR" ///
+| country == "GBR" // I only want to keep the OECD-Europe countries
+
+replace country = "Austria" if (country=="AUT")
+replace country = "Belgium" if (country=="BEL")
+replace country = "Czech Republic" if (country=="CZE")
+replace country = "Denmark" if (country=="DNK")
+replace country = "Estonia" if (country=="EST")
+replace country = "Finland" if (country=="FIN")
+replace country = "France" if (country=="FRA")
+replace country = "Germany" if (country=="DEU")
+replace country = "Greece" if (country=="GRC")
+replace country = "Hungary" if (country=="HUN")
+replace country = "Iceland" if (country=="ISL")
+replace country = "Ireland" if (country=="IRL")
+replace country = "Italy" if (country=="ITA")
+replace country = "Luxembourg" if (country=="LUX")
+replace country = "Netherlands" if (country=="NLD")
+replace country = "Norway" if (country=="NOR")
+replace country = "Poland" if (country=="POL")
+replace country = "Portugal" if (country=="PRT")
+replace country = "Slovenia" if (country=="SVN")
+replace country = "Spain" if (country=="ESP")
+replace country = "Sweden" if (country=="SWE")
+replace country = "Switzerland" if (country=="CHE")
+replace country = "Turkey" if (country=="TUR")
+replace country = "United Kingdom" if (country=="GBR") /* to rename all the values which use the abbreviation of countries */
+
+save PS75TEM, replace // save the temporary data set for later use
+
+use PS75TEM, clear
+keep if measure == "PC_GDP"
+keep if subject == "TOT"
+rename value PC_GDP
+drop subject measure
+
+save PS751, replace // save the data set with variable PC_GDP
+
+use PS75TEM, clear
+keep if measure == "USD_CAP"
+keep if subject == "TOT"
+rename value USD_CAP
+drop subject measure
+
+save PS752, replace // save the data set with variable USD_CAP
+
+use PS752, clear
+merge m:m year country using PS751.dta, generate(merge74) // the fourth merging work 
+
+save PS74merge, replace
+
+use PS74merge, clear
+merge m:m country year using PS73merge, generate(merge75) // the fifth merging work 
+
+save PS75merge, replace
+
+****************************
+*** (Our World in Data) Data
+****************************
+
+use "https://docs.google.com/uc?id=1IzjRpIl08bZXGqRD_Cpu1hiNX_DXbdah&export=download", clear
+
+rename entity country
+rename public_health~p Pub_Heal_PC_GDP
+label variable Pub_Heal_PC_GDP "Public_health_expenditure_pc_gdp (percent)"
+
+keep if year>1999 & year<2016 // to only keep the data from 2000 to 2015
+keep if country == "Austria" | country == "Belgium" | country == "Czech Republic" ///
+| country == "Denmark" | country == "Estonia" | country == "Finland" | country == "France" ///
+| country == "Germany" | country == "Greece" | country == "Hungary" | country == "Iceland" ///
+| country == "Ireland" | country == "Italy" | country == "Luxembourg" ///
+| country == "Netherlands" | country == "Norway" | country == "Poland" ///
+| country == "Portugal" | country == "Slovenia" | country == "Spain" | country == "Sweden" ///
+| country == "Switzerland" | country == "Turkey" | country == "United Kingdom" /* I only want to keep the OECD-Europe countries */
+
+save PS76,replace
+
+use PS76, clear
+merge m:m country year using PS75merge, generate(merge76) // the sixth merging work
+
+save PS76merge, replace // All the merging work is done here and I will go on to analyze my data
+
+*****************
+*** Data Analysis
+*****************
+
+use PS76merge, clear
+
+replace code = "CZE" if (code=="")
+
+compress
+order year country // to make the whole dataset look nice
+
+keep country year GGHE_Domestic Govgross usdexp NGDPD LP GGR_NGDP GGX_NGDP ///
+GGXWDG_NGDP V102 V241 V242 V254 // only keep the variables that are related to my research questions
+
+rename Govgross Heal_Exp_GDP
+rename usdexp Heal_Exp_PC
+rename GGHE_Domestic Heal_Exp
+rename NGDPD GDP
+rename LP Population
+rename GGR_NGDP Gov_Rev_GDP
+rename GGX_NGDP Gov_Exp_GDP
+rename GGXWDG_NGDP Gov_Debt_GDP
+rename V102 Social_Exp_GDP
+rename V241 GDP_Growth
+rename V254 GNI_PC
+rename V242 GDP_PC
+
+label var Heal_Exp_GDP "Domestic General Government Health Expenditure as % of GDP"
+label var Heal_Exp_PC "Domestic General Government Health Expenditure per capita"
+label var Heal_Exp "Domestic General Government Health Expenditure"
+label var GDP "Gross Domestic Product"
+label var Population "The Total Population"
+label var Gov_Rev_GDP "General Government Revenue as % of GDP"
+label var Gov_Exp_GDP "General Government Total Expenditure as % of GDP"
+label var Gov_Debt_GDP "General Government Gross Debt as % of GDP"
+label var Social_Exp_GDP "Total Public Social Expenditure as % of GDP"
+label var GDP_Growth "GDP Growth Rate"
+label var GNI_PC "GNI per capita"
+label var GDP_PC "GDP per capita"
+
+destring *, replace // to change the type of all the variables for the later calculations and analysis
+
+save PS7Final, replace
+
+
+***** Graphs *****
+use PS7Final, clear
+
+foreach v of var country {
+        	encode `v', gen(`v'name)
+        } // use the loop the destring the variable country
+		
+drop country 
+rename countryname country // change the name back for the analysis below
+label var country "The OECD-Europe countries"
+
+order country year 
+
+save PS71Final, replace
+
+use PS71Final, replace
+
+sum // to get a summary of descriptive statistics first
+
+xtset country year 
+xtline Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth, legend(size(vsmall))
+xtline Heal_Exp_GDP, overlay ytitle("Health Expenditure as % of GDP", place(top) margin(large)) ///
+legend(size(vsmall) cols(3)) 
+xtline Heal_Exp_PC GDP_PC GNI_PC Population, legend(size(vsmall)) 
+xtline Heal_Exp_PC, overlay ytitle("Health Expenditure per capita", place(top) margin(large)) ///
+legend(size(vsmall) cols(3)) // to use the line charts to show the relationship between the dependent variable and independent variables
+
+symplot Heal_Exp_GDP, title("Health Expenditure as % of GDP", size(medsmall))
+symplot Heal_Exp_PC, title("Health Expenditure per capita", size(medsmall))
+/* The kind of graph shows most of the dependent variable points above the average line */ 
+
+tabstat Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth, by(country) ///
+stat (mean sd min max) nototal long format
+tabstat Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth, by(country) ///
+stat (mean sd min max) nototal long col(stat)
+tabstat Heal_Exp_PC GDP_PC GNI_PC Population, by(country) ///
+stat (mean sd min max) nototal long format
+tabstat Heal_Exp_PC GDP_PC GNI_PC Population, by(country) ///
+stat (mean sd min max) nototal long col(stat) // to make some tables for a quick summary statistics 
+
+by country: pwcorr Heal_Exp_GDP Gov_Debt_GDP, sig
+
+#delimit ; // to use the spider graph
+radar Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP if year == 2000,
+   aspect(1) 
+   title(Government related activities in the OECD-Europe countries, size(*0.6)) 
+   lc(red blue green)  
+   lw(*1 *2 *4) rlabel(0 20 40 60 80 100) labsize(*0.7) 
+   legend(label(1 "Government Revenue") 
+          label(2 "Government Debt")
+		  label(3 "Government Expenditure")
+          col(1) size(*.8)) ;
+#delimit cr // to see the relation between government revenue and government debt in year 2000
+
+#delimit ;
+radar Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP if year == 2015,
+   aspect(1) 
+   title(Government related activities in the OECD-Europe countries, size(*0.6)) 
+   lc(red blue green)  
+   lw(*1 *2 *4) rlabel(0 20 40 60 80 100) labsize(*0.7) 
+   legend(label(1 "Government Revenue") 
+          label(2 "Government Debt")
+		  label(3 "Government Expenditure")
+          col(1) size(*.8)) ;
+#delimit cr /* to see the relation between government revenue and government debt in year 2015, 
+so we can make a comparison between 2000 and 2015 to figure out the differences of the two years. */
+
+by country: pwcorr Heal_Exp_GDP Gov_Debt_GDP, sig /* After getting the correlaiton between debt 
+and health expenditure in the OECD-Europe countries. The results show that the correlation varies a lot 
+in different countries. Therefore, I will focus on their relationship and do a deep analysis of the common
+trend across the OECD-Europe countries */
+
+preserve
+keep year country Heal_Exp_GDP Gov_Debt_GDP
+collapse (mean) Heal_Exp_GDP Gov_Debt_GDP, by(year) /* To make a deep analysis below, I only want 
+to explore the relationship between health expenditure as % of GDP and government debt as % of GDP */
+save PS_Debt1, replace
+twoway(line Heal_Exp_GDP year) (line Gov_Debt year, yaxis(2)) 
+
+use PS71Final, clear
+keep year country Heal_Exp_GDP Gov_Debt_GDP
+collapse (mean) Heal_Exp_GDP Gov_Debt_GDP, by(country) 
+save PS_Debt2, replace
+twoway(line Heal_Exp_GDP country) (line Gov_Debt country, yaxis(2)) 
+corr Heal_Exp_GDP Gov_Debt_GDP /* It is very interesting to find that
+there is not a necessarily negative relationship between health expenditure as a share of GDP and 
+government debt as a share of GDP. The correlation coefficient here is less than 0.7. Therefore, the relationship between the two variables cannot be considered strong. Theoretically, we usually tend to 
+hold that if the government increases its debt then the money which can be used for health 
+expenditure would become less. Actually, acccording to our analysis above, at least in the OECD-Europe 
+countries, it is not true. */
+restore 
+
+preserve 
+use PS71Final, clear
+collapse (mean) Heal_Exp_GDP Gov_Debt_GDP, by(country)
+gsort -Gov_Debt_GDP // allows us to arrange the variables in a descending order
+keep if Gov_Debt_GDP<77 /* Governments usually don't become concerned until the debt-to-GDP ratio reaches a critical level. The World Bank has said the tipping point is 77% or more. */
+count
+#delimit ;
+  graph hbar (asis) Gov_Debt_GDP, over(country, sort(Gov_Debt_GDP)
+  descending axis(off)) blabel(group, size(vsmall) position ("Base") justification(left  )) ///
+  title(19 Countries with the proper debt-to-GDP ratio (2000-2015), size(medsmall)) legend(off) ;
+#delimit cr
+graph save PSDebt1, replace
+
+use PS71Final, clear
+collapse (mean) Heal_Exp_GDP Gov_Debt_GDP, by(country)
+gsort -Gov_Debt_GDP 
+keep if Gov_Debt_GDP>=77 
+count
+#delimit ;
+  graph hbar (asis) Gov_Debt_GDP, over(country, sort(Gov_Debt_GDP)
+  descending axis(off)) blabel(group, size(vsmall) position ("Base") justification(left  )) ///
+  title(5 Countries without the proper debt-to-GDP ratio (2000-2015), size(medsmall)) legend(off) ;
+#delimit cr
+graph save PSDebt2, replace
+graph combine PSDebt1.gph PSDebt2.gph, iscale (0.5)
+graph save PSDebt3, replace
+restore // to compare the countries with the proper debt-to-GDP ratio and the ones without the proper ratio
+
+twoway (connected Heal_Exp_PC year, sort lcolor(blue)) (line Heal_Exp_GDP year, sort yaxis(2) ///
+lcolor(red)), legend(size(vsmall) rows(2)) xtitle("Year", place(right) margin(medsmall)) ///
+ytitle("Health Expenditure per capita", place(top) margin(large)) ///
+ytitle("Health Expenditure as %of GDP", axis(2)) ///
+title(The Description of Health Expenditure in all the countries from 2000 to 2015, ///
+place(top) size(medsmall)) // to describe the the trend of the two main dependent variables in my study
+
+xtset country year
+twoway (scatter Heal_Exp_PC Population, sort mcolor(blue) msize(small) ///
+msymbol(point) mlabsize(small) mlabcolor(black))
+
+preserve
+collapse (mean) Heal_Exp_PC GDP_PC, by(country)
+twoway (scatter Heal_Exp_PC GDP_PC, sort mlabel (country) msize(vsmall))
+twoway (qfitci Heal_Exp_PC GDP_PC, stdf) (scatter Heal_Exp_PC GDP_PC)
+twoway (qfitci Heal_Exp_PC GDP_PC, stdf level(99) color(yellow)) ///
+(qfitci Heal_Exp_PC GDP_PC, stdf level(90)) (scatter Heal_Exp_PC GDP_PC) 
+corr Heal_Exp_PC GDP_PC
+/* By looking at their relationship under different confidence intervals, it is easy to find that 
+the the two variables here have a positive relationship. */
+restore
+
+***** Bar Charts *****
+#delimit ;
+	graph hbar Heal_Exp_PC Population, 
+	over(country)
+	ytitle("") 
+	legend(size(small))
+	title("The Relationship of Health Expenditure per capita and Population", size(small)) ;
+#delimit cr
+graph save hbar1, replace 
+
+#delimit ;
+	graph hbar Heal_Exp_PC GDP_PC GNI_PC, 
+	over(country)
+	ytitle("") 
+	legend(size(small))
+	title("The Relationship of Health Expenditure as per capita and GDP/GNI per capita", size(small)) ;
+#delimit cr
+graph save hbar2, replace 
+
+#delimit ;
+	graph hbar Heal_Exp_GDP GDP_Growth, 
+	over(country)
+	ytitle("") 
+	legend(size(small))
+	title("The Relationship of Health Expenditure as % of GDP and GDP Growth", size(small)) ;
+#delimit cr
+graph save hbar3, replace 
+
+#delimit ;
+	graph hbar Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP, 
+	over(country)
+	ytitle("") 
+	legend(size(small))
+	title("The Relationship of Health Expenditure as % of GDP and Government Activities", size(small)) ;
+#delimit cr
+graph save hbar4, replace 
+
+graph combine hbar1.gph hbar2.gph hbar3.gph hbar4.gph, c(2) iscale (0.5)
+graph save PShbar, replace 
+ 
+***** Macro *****
+summarize Heal_Exp_GDP
+return list
+scalar se_Heal_Exp_GDP = r(sd)/sqrt(r(N)) // to get the standard error of health expenditure as a share of GDP
+dis "sd(Heal_Exp_GDP) =" r(sd)
+dis "se(Heal_Exp_GDP) =" se_Heal_Exp_GDP
+scalar t_value = r(mean) / se_Heal_Exp_GDP /* to test whether the mean of ghealth expenditure as a share
+of GDP is statistically different from 0 */
+dis t_value
+ttest Heal_Exp_GDP=0 // to do the T-Test for our analysis 
+
+global Heal_Exp_PC = Heal_Exp_PC / 1000
+global Heal_Exp_GDP = Gov_Rev_GDP + Gov_Debt_GDP
+dis "$Heal_Exp_GDP"(1) // to display the 1st value of variable Heal_Exp_GDP
+dis "$Heal_Exp_PC"(20) // to display the 20th value of variable Heal_Exp_PC
+
+foreach var of varlist * {
+di "the `var' is laballed as `:var lab `var' ' "
+} // to check the label of each variable in this study
+
+***** Regression Analysis *****
+sum // to get a summary of descriptive statistics again before we do the regression analysis 
+
+gen lnGDP = ln(GDP) // to define a new variable
+
+egen ID = group(country) // to encode the country variable
+xtset ID year, yearly // to tell Stata that my dataset is a panel data
+xtreg Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth ///
+Population GDP_PC, fe // fixed effects model
+estimates store Modelfixed1
+
+xtreg Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth ///
+Population GDP_PC, re // random effects model 
+estimates store Modelrandom1 
+
+hausman fixed random // to do the Hausman Test
+hausman fixed random, sigmamore
+
+xttest0 // to do the Breusch and Pagan Lagrangian multiplier test for random effects
+
+xtreg Heal_Exp_PC GDP_PC GNI_PC Population GDP_Growth, fe vce(robust) /* to run the second 
+fixed effects model */
+estimates store Modelfixed2
+
+xtreg Heal_Exp_PC GDP_PC GNI_PC Population GDP_Growth, re vce(robust) /* to run the second 
+random effects model */
+estimates store Modelrandom2
+
+esttab Model*, order(_cons) b(a2) t(a2) sfmt(a3) nobase label mtitles ///
+		varwidth(30) stats(N r2 F) // to get the final result 
+
+esttab Model* using table1.csv, order(_cons) b(a2) t(a2) sfmt(a3) nobase ///
+		label mtitles varwidth(30) stats(N r2 F) csv replace // another way to get the result and export it
+
+/* Through the regression analysis above, we can get the results through the four regression 
+models. In Model 1, it shows that an increase of one percentage point in Gov_Debt_GDP is 
+associated with a 0.062 percentage point decrease in Heal_Rev_GDP controlling for other variables. 
+This negative relationship is statistically significant at the p=0.001 level. The relationship 
+between Heal_Exp_GDP and Heal_Debt_GDP is not statistically significant in this model. The similar
+result goes with Model 2.  In Model 3, it shows that an increase of 1 percentage point GDP growth
+rate can lead to an decrease of 69 U.S. dollars in Heal_Exp_PC keeping other variables constant. It also shows that an increase of 1 unit of GNI per capita is associated with a 0.22 unit increase in Heal_Exp_PC controlling for other variables. In model 4, it shows that if we increase population by one unit 
+we would expect health expenditure per capita to increase by 14.5 units. */
+
+***********************************
+**** Limitations of this study ****
+***********************************
+
+/* There are some limitations of this study. First, all the data is from the 21st century which 
+is a time of globalization and fast economic and social welfare development worldwide. If we 
+move back the 20th century, the things might be quite different. The results can change as well. */
+
+log close
+
+clear 
+exit
+
+**************END OF DOFILE**************************************************************
+**************END OF DOFILE**************************************************************
+**************END OF DOFILE**************************************************************
+**************END OF DOFILE**************************************************************
