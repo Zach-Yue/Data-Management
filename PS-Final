@@ -4,18 +4,25 @@
 /* 
 ********************
 
-**** Abstract *****
+**** Abstract ******
 The main purpose of this study is to examine the degree to which the Gross Domestic Product (GDP), 
 total population, government revenue, government total expenditure, and government gross debt 
-predict healthcare expenditure (HCE) by making a comparison amongst the OECD-Europe countries
-from 2000 to 2015. This study aims at disclosing robust explanatory variables for health care 
-expenditure (HCE) growth. Data collected from the Global Welfare (GLOW), the World Bank (WB), 
+predict health care expenditure (HCE) by making a comparison amongst the OECD-Europe countries
+between the years of 2000 and 2015. This study aims at disclosing robust explanatory variables 
+for HCE growth. Data collected from the Global Welfare (GLOW), the World Bank (WB), 
 the International Monetary Fund (IMF), the World Health Organization (WHO), the Organisation 
 for Economic Co-operation and Development (OECD), and Our World in Data is used to 
-study the relationship between healthcare expenditure (the dependent variable) and several 
-independent variables. Besides, the study also aims at investigating whether HCE and GDP have a 
-long-term relationship across different countries and at measuring the elasticity of HCE from 1990 
-to 2015. By introducing four regression models, the results of this study support previous findings 
+study the relationship between health care expenditure (the dependent variable) and several 
+independent variables. Besides, the study also aims at investigating whether HCE and any of the
+government activities have a long-term relationship across different countries. The analysis of 
+the data is performed by using the robust fixed effects regression analysis model. Using the 
+fixed effects model can help us to analyze the impact of the independent variables that vary 
+over time. When it comes to the main findings of this paper, key determinants of the share of HCE 
+in GDP over the period 2000-2015 are
+
+government/state activities while the indicators related to people and the health-related activities
+only make an insignificant difference to government health expenditure as a share of GDP. 
+ By introducing four regression models, the results of this study support previous findings 
 that GDP is the most important determinant of HCE. Besides, it is found through this study that 
 government gross debt and government total expenditure do not play a role in HCE while government 
 revenue can make an impact on HCE.
@@ -43,14 +50,14 @@ My completed dataset includes data from the following sources:
 ********************
 */
 
-*----------------------------
+*-------------------
 
-//---------------------------data mgmt----------------------------------------------
-//---------------------------data mgmt----------------------------------------------
-//---------------------------data mgmt----------------------------------------------
+//---------------------------data mgmt--------------------------------
+//------------------------ final project------------------------------
+//----------------------------May 2022--------------------------------
 
 clear         
-set matsize 1000 // Sets the maximum number of variables to specific amount, default is 400
+set matsize 1000 // Sets the maximum number of variables to specific amount, the default is 400
 version 17.0
 set more off
 cap log close  // capture is cool--it supresses error :)
@@ -600,7 +607,9 @@ stat (mean sd min max) nototal long format
 tabstat Heal_Exp_PC GDP_PC GNI_PC Population, by(country) ///
 stat (mean sd min max) nototal long col(stat) // to make some tables for a quick summary statistics 
 
-by country: pwcorr Heal_Exp_GDP Gov_Debt_GDP, sig
+sort country
+
+by country: pwcorr Heal_Exp_GDP Gov_Debt_GDP, obs sig /* to get the correlation between the two varibles listed here—health expenditure as a share of GDP and government debt as a share of GDP */
 
 #delimit ; // to use the spider graph
 radar Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP if year == 2000,
@@ -717,7 +726,7 @@ graph save hbar1, replace
 	over(country)
 	ytitle("") 
 	legend(size(small))
-	title("The Relationship of Health Expenditure as per capita and GDP/GNI per capita", size(small)) ;
+	title("The Relationship of Health Expenditure per capita and GDP/GNI per capita", size(small)) ;
 #delimit cr
 graph save hbar2, replace 
 
@@ -742,7 +751,7 @@ graph save hbar4, replace
 graph combine hbar1.gph hbar2.gph hbar3.gph hbar4.gph, c(2) iscale (0.5)
 graph save PShbar, replace 
  
-***** Macro *****
+***** More Macros *****
 summarize Heal_Exp_GDP
 return list
 scalar se_Heal_Exp_GDP = r(sd)/sqrt(r(N)) // to get the standard error of health expenditure as a share of GDP
@@ -753,72 +762,124 @@ of GDP is statistically different from 0 */
 dis t_value
 ttest Heal_Exp_GDP=0 // to do the T-Test for our analysis 
 
-global Heal_Exp_PC = Heal_Exp_PC / 1000
-global Heal_Exp_GDP = Gov_Rev_GDP + Gov_Debt_GDP
-dis "$Heal_Exp_GDP"(1) // to display the 1st value of variable Heal_Exp_GDP
-dis "$Heal_Exp_PC"(20) // to display the 20th value of variable Heal_Exp_PC
+global Heal_Exp_PC = GDP_PC / Heal_Exp_PC
+global Gov_Exp_GDP = Gov_Rev_GDP + Gov_Debt_GDP
+dis "$Heal_Exp_PC"(1) // to display the 1st value of variable Heal_Exp_GDP
+dis "$Gov_Exp_GDP"(20) // to display the 20th value of variable Heal_Exp_PC
 
 foreach var of varlist * {
 di "the `var' is laballed as `:var lab `var' ' "
 } // to check the label of each variable in this study
 
 ***** Regression Analysis *****
-sum // to get a summary of descriptive statistics again before we do the regression analysis 
+use PS71Final, clear 
+
+global id country
+global t year
+global ylist Heal_Exp_GDP
+global xlist Gov_Debt_GDP Gov_Rev_GDP Gov_Exp_GDP GDP_Growth Population ///
+GDP_PC GNI_PC // to use macro names to help to put the variables more easily 
+
+replace Heal_Exp = Heal_Exp / 1000 // to make sure they are calculated in trillions
 
 gen lnGDP = ln(GDP) // to define a new variable
 
-egen ID = group(country) // to encode the country variable
-xtset ID year, yearly // to tell Stata that my dataset is a panel data
-xtreg Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth ///
-Population GDP_PC, fe // fixed effects model
-estimates store Modelfixed1
+describe $id $t $ylist $xlist
+sum $id $t $ylist $xlist // to see whether the marco names work well or not
 
-xtreg Heal_Exp_GDP Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP GDP_Growth ///
-Population GDP_PC, re // random effects model 
-estimates store Modelrandom1 
+sort $id $t
+xtset $id $t, yearly // to tell Stata that my dataset is a panel data
+xtdescribe 
+xtsum $id $t $ylist $xlist // to get a summary of all the variables for my regression analysis below
 
-hausman fixed random // to do the Hausman Test
-hausman fixed random, sigmamore
+* Pooled OLS model
+reg $ylist $xlist 
+estimates store Model1
 
-xttest0 // to do the Breusch and Pagan Lagrangian multiplier test for random effects
+* Fixed effects model
+xtreg $ylist $xlist, fe
+estimates store Model2
 
-xtreg Heal_Exp_PC GDP_PC GNI_PC Population GDP_Growth, fe vce(robust) /* to run the second 
-fixed effects model */
-estimates store Modelfixed2
+* Random Effects Model
+xtreg $ylist $xlist, re 
+estimates store Model3
 
-xtreg Heal_Exp_PC GDP_PC GNI_PC Population GDP_Growth, re vce(robust) /* to run the second 
-random effects model */
-estimates store Modelrandom2
+* Hausman test for fixed effects model versus random effects model
+hausman Model2 Model3 /* by focusing on the results of this Hausman test, we determine 
+whether there are significant differences in the coefficients. And this significant 
+Hausman test allows us to accept the hypothesis by indicating that the fixed effects model is 
+appropriate. By caution, it is necesary to test the presence of random effects by using Breusch-
+Pagan Lagrange multiplier (LM) test */
+
+* Breusch-Pagan LM test for random effects model versus pooled OLS model
+xttest0 /* we can see that the result of this test is significant by indicating 
+random effects and refusing the pooled OLS model. As the Hausman test has eliminated 
+the random effects model and the LM has refused the pooled OLS model. We select with 
+confidence now the fixed effects model. */
+
+reg $ylist $xlist
+estat vif
+estat hettest /*Also, we must check the heteroscedasticity test for the selected fixed 
+effects model. The Null hypothesis is homoscedasticity. Our significant test result rejects 
+the Null that by indicating that our fixed effects model has a heteroscedasticity problem. 
+Hence, I have to use the option robust to correct this regression model. Finally, the robust 
+fixed effects model is used to assess the proposed research hypotheses. */
+
+* Robust fixed effects model 
+xtreg $ylist $xlist, fe vce(robust)
+estimates store Model4
 
 esttab Model*, order(_cons) b(a2) t(a2) sfmt(a3) nobase label mtitles ///
-		varwidth(30) stats(N r2 F) // to get the final result 
-
+		varwidth(30) stats(N r2 F)	
 esttab Model* using table1.csv, order(_cons) b(a2) t(a2) sfmt(a3) nobase ///
-		label mtitles varwidth(30) stats(N r2 F) csv replace // another way to get the result and export it
-
-/* Through the regression analysis above, we can get the results through the four regression 
-models. In Model 1, it shows that an increase of one percentage point in Gov_Debt_GDP is 
-associated with a 0.062 percentage point decrease in Heal_Rev_GDP controlling for other variables. 
-This negative relationship is statistically significant at the p=0.001 level. The relationship 
-between Heal_Exp_GDP and Heal_Debt_GDP is not statistically significant in this model. The similar
-result goes with Model 2.  In Model 3, it shows that an increase of 1 percentage point GDP growth
-rate can lead to an decrease of 69 U.S. dollars in Heal_Exp_PC keeping other variables constant. It also shows that an increase of 1 unit of GNI per capita is associated with a 0.22 unit increase in Heal_Exp_PC controlling for other variables. In model 4, it shows that if we increase population by one unit 
-we would expect health expenditure per capita to increase by 14.5 units. */
+		label mtitles varwidth(30) stats(N r2 F) csv replace 
+		
+*********************************
+***** Results of this study *****	
+*********************************
+/* Through the regression analysis above, we can get the results through the robust fixed
+effects regression model. First of all, it is surprising that the variable of Gov_Debt_GDP
+is not a determinant of HCE as a share of GDP while Gov_Rev_GDP and Gov_Exp_GDP are both 
+determinants of HCE as a share of GDP. In Model 4, it shows that an increase of one 
+percentage point in Gov_Rev_GDP is associated with a 0.092 percentage point decrease in 
+Heal_Exp_GDP controlling for other variables. This negative relationship is statistically 
+significant at the p=0.05 level. Besides, it also shows that an increase of one 
+percentage point in Gov_Rev_GDP is associated with a 0.10 percentage point increase in 
+Heal_Exp_GDP controlling for other variables. Furthermore, GDP Growth Rate, total population, 
+and GNI per capita are all determinants of HCE as a share of GDP in the OECD-Europe countries. 
+However, GDP growth rate has a negative association with HCE as a share of GDP. Total population 
+and GNI per capita are positively correlated with our dependent variable in this study. It is 
+shown that an increase of 1 million people is associated with a 0.099 percentage point increase 
+in Heal_Exp_GDP and an increase of 1 dollar in GNI_PC is associated with a 0.000086 percentage 
+point increase in Heal_Exp_GDP controlling for other variables. Finally, it is shown that
+GDP per capita does not make a impact on HCE as a share of GDP either in the original fixed 
+effects model or the robust fixed effects model. */
 
 ***********************************
 **** Limitations of this study ****
 ***********************************
 
-/* There are some limitations of this study. First, all the data is from the 21st century which 
-is a time of globalization and fast economic and social welfare development worldwide. If we 
-move back the 20th century, the things might be quite different. The results can change as well. */
+/* As for this study, the focused research context is the OECD-Europe countries. Most of the 
+countries that are members of the OECD are developed countries that have a high-income economy.
+Therefore, the first limitation of this study is that it is only based on the data collected from the
+European countries. This limits the generalizability of the results of this study. The results may
+not apply to other areas such as Asia and Africa if we take account of some political indications.
+Besides, all the data is manually merged into a single data set from different sources, and almost
+all the data sources are regularly updated on their websites by using their own calculation
+methods. For data sources from the World Bank, they are calculated by using the constant U.S.
+dollar methodology. Specifically, the particular base year for the World Bank data is 2015 and
+all the data is applied backwards and forwards from the 2015 current price value in U.S. dollars
+to estimate the corresponding constant price series. Other websites, such as the World Health
+Organization, use the 2019 current price or the 2020 current price. The calculation results may be
+a little bit different if all the websites adopt the same constant-dollar value to publish their data.
+Therefore, future research on this area can use some time-series or cross-sectional data collected
+from the same source to study the non-European countries/regions. */
 
 log close
 
 clear 
 exit
 
-**************END OF DOFILE**************************************************************
-**************END OF DOFILE**************************************************************
-**************END OF DOFILE**************************************************************
-**************END OF DOFILE**************************************************************
+**************END OF DOFILE****************
+**************END OF DOFILE****************
+**************END OF DOFILE****************
