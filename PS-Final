@@ -55,7 +55,7 @@ My completed dataset includes data from the following sources:
 //----------------------------May 2022--------------------------------
 
 clear         
-set matsize 1000 // Sets the maximum number of variables to specific amount, the default is 400
+set matsize 10000 // Sets the maximum number of variables to specific amount, the default is 400
 version 17.0
 set more off
 cap log close  // capture is cool--it supresses error :)
@@ -141,7 +141,7 @@ keep if countryname == "Austria" | countryname == "Belgium" | countryname == "Cz
 
 foreach x of varlist yr* {
 	replace `x' = "." if `x' == ".."
-} // use the loop the replace all the ".." in the data with "."
+} // use the loop to replace all the ".." in the data with "."
 
 misstable pattern, bypat // to see if there are any missing values
 
@@ -556,7 +556,6 @@ label var GDP_PC "GDP per capita"
 destring *, replace // to change the type of all the variables for the later calculations and analysis
 
 save PS7Final, replace
-
 
 ***** Graphs *****
 use PS7Final, clear
