@@ -5,9 +5,10 @@
 ********************
 
 **** Abstract ******
-The main purpose of this study is to examine the degree to which the Gross Domestic Product (GDP), 
-total population, government revenue, government total expenditure, and government gross debt 
-predict health care expenditure (HCE) by making a comparison amongst the OECD-Europe countries
+The main purpose of this study is to examine the degree to which the Gross Domestic Product (GDP)
+per capita, GDP growth rate, the Gross National Income (GNI) per capita, total population, 
+government revenue, government total expenditure, and government gross debt predict health 
+care expenditure (HCE) as a share of GDP by making a comparison amongst the OECD-Europe countries
 between the years of 2000 and 2015. This study aims at disclosing robust explanatory variables 
 for HCE growth. Data collected from the Global Welfare (GLOW), the World Bank (WB), 
 the International Monetary Fund (IMF), the World Health Organization (WHO), the Organisation 
@@ -18,14 +19,11 @@ government activities have a long-term relationship across different countries. 
 the data is performed by using the robust fixed effects regression analysis model. Using the 
 fixed effects model can help us to analyze the impact of the independent variables that vary 
 over time. When it comes to the main findings of this paper, key determinants of the share of HCE 
-in GDP over the period 2000-2015 are
-
-government/state activities while the indicators related to people and the health-related activities
-only make an insignificant difference to government health expenditure as a share of GDP. 
- By introducing four regression models, the results of this study support previous findings 
-that GDP is the most important determinant of HCE. Besides, it is found through this study that 
-government gross debt and government total expenditure do not play a role in HCE while government 
-revenue can make an impact on HCE.
+in GDP over the period 2000-2015 are government revenue as a share of GDP, government expenditure
+as a share of GDP, GDP Growth Rate, total population, and GNI per capita according to the results 
+of the regression analysis. The results of this study support previous findings that government 
+activities are an important determinant of HCE. Besides, it is found through this study that 
+government gross debt does not play a role in HCE as a share of GDP. 
 
 My completed dataset includes data from the following sources:
 
@@ -67,7 +65,6 @@ dis "Problem Set Final for Data Management"
 ***************
 ** Glow Data **
 ***************
-
 use "https://docs.google.com/uc?id=1_ufqde_w_IfShyvQTU_QmVaWDISzHkD4&export=download", clear
 
 d 
@@ -131,7 +128,6 @@ save PS71GLOW, replace
 *************
 ** WB data **
 *************
-
 use "https://docs.google.com/uc?id=1DRn5ZqE7mgC79Me2LEoAXiYxI5Q7m_eS&export=download", clear
 
 keep if countryname == "Austria" | countryname == "Belgium" | countryname == "Czech Republic" ///
@@ -196,7 +192,6 @@ browse // to see if anything goes wrong
 **************
 ** IMF Data **
 **************
-
 use "https://docs.google.com/uc?id=1XlYy9V4CBXRKmsO9oFrTXR4jrbovUP8N&export=download", clear
 
 keep if Country == "Austria" | Country == "Belgium" | Country == "Czech Republic" ///
@@ -332,7 +327,6 @@ browse // to double check this merging work
 **************
 ** WHO Data **
 **************
-
 use "https://docs.google.com/uc?id=1FLtvsvsq_i132iDZxH9xnEghQuPS0nhO&export=download", clear
 
 drop C // it is the ucnecessary information
@@ -423,7 +417,6 @@ save PS73merge, replace
 ***************
 ** OECD Data **
 ***************
-
 use "https://docs.google.com/uc?id=1bSVE7BEeDGJ8LvXPf3SPg6WQgGuYyUFC&export=download", clear
 
 keep if time>1999 & time<2016 // to only keep the data from 2000 to 2015
@@ -499,7 +492,6 @@ save PS75merge, replace
 ****************************
 *** (Our World in Data) Data
 ****************************
-
 use "https://docs.google.com/uc?id=1IzjRpIl08bZXGqRD_Cpu1hiNX_DXbdah&export=download", clear
 
 rename entity country
@@ -525,7 +517,6 @@ save PS76merge, replace // All the merging work is done here and I will go on to
 *****************
 *** Data Analysis
 *****************
-
 use PS76merge, clear
 
 replace code = "CZE" if (code=="")
