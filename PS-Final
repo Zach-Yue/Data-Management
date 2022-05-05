@@ -54,7 +54,7 @@ My completed dataset includes data from the following sources:
 //------------------------ final project------------------------------
 //----------------------------May 2022--------------------------------
 
-clear all
+clear all     
 set matsize 10000 // Sets the maximum number of variables to specific amount, the default is 400
 version 17.0
 set more off
@@ -499,13 +499,15 @@ rename public_health~p Pub_Heal_PC_GDP
 label variable Pub_Heal_PC_GDP "Public_health_expenditure_pc_gdp (percent)"
 
 keep if year>1999 & year<2016 // to only keep the data from 2000 to 2015
-keep if country == "Austria" | country == "Belgium" | country == "Czech Republic" ///
+keep if country == "Austria" | country == "Belgium" | country == "Czechia" ///
 | country == "Denmark" | country == "Estonia" | country == "Finland" | country == "France" ///
 | country == "Germany" | country == "Greece" | country == "Hungary" | country == "Iceland" ///
 | country == "Ireland" | country == "Italy" | country == "Luxembourg" ///
 | country == "Netherlands" | country == "Norway" | country == "Poland" ///
 | country == "Portugal" | country == "Slovenia" | country == "Spain" | country == "Sweden" ///
 | country == "Switzerland" | country == "Turkey" | country == "United Kingdom" /* I only want to keep the OECD-Europe countries */
+
+replace country = "Czech Republic" if (country=="Czechia") /* to change the name for the merging work */
 
 save PS76,replace
 
@@ -599,7 +601,7 @@ stat (mean sd min max) nototal long col(stat) // to make some tables for a quick
 
 sort country
 
-by country: pwcorr Heal_Exp_GDP Gov_Debt_GDP, obs sig /* to get the correlation between the two varibles listed here—health expenditure as a share of GDP and government debt as a share of GDP */
+by country: pwcorr Heal_Exp_GDP Gov_Debt_GDP Gov_Exp_GDP Gov_Rev_GDP, obs sig /* to get the correlation between the dependent varible and the independent variables which are about government activities */
 
 #delimit ; // to use the spider graph
 radar Gov_Rev_GDP Gov_Debt_GDP Gov_Exp_GDP if year == 2000,
@@ -658,7 +660,7 @@ gsort -Gov_Debt_GDP // allows us to arrange the variables in a descending order
 keep if Gov_Debt_GDP<77 /* Governments usually don't become concerned until the debt-to-GDP ratio reaches a critical level. The World Bank has said the tipping point is 77% or more. */
 count
 #delimit ;
-  graph hbar (asis) Gov_Debt_GDP, over(country, sort(Gov_Debt_GDP)
+  graph hbar (asis) Gov_Debt_GDP, over(country, sort(Gov_Debt_GDP) ///
   descending axis(off)) blabel(group, size(vsmall) position ("Base") justification(left  )) ///
   title(19 Countries with the proper debt-to-GDP ratio (2000-2015), size(medsmall)) legend(off) ;
 #delimit cr
@@ -670,7 +672,7 @@ gsort -Gov_Debt_GDP
 keep if Gov_Debt_GDP>=77 
 count
 #delimit ;
-  graph hbar (asis) Gov_Debt_GDP, over(country, sort(Gov_Debt_GDP)
+  graph hbar (asis) Gov_Debt_GDP, over(country, sort(Gov_Debt_GDP) ///
   descending axis(off)) blabel(group, size(vsmall) position ("Base") justification(left  )) ///
   title(5 Countries without the proper debt-to-GDP ratio (2000-2015), size(medsmall)) legend(off) ;
 #delimit cr
@@ -678,6 +680,8 @@ graph save PSDebt2, replace
 graph combine PSDebt1.gph PSDebt2.gph, iscale (0.5)
 graph save PSDebt3, replace
 restore // to compare the countries with the proper debt-to-GDP ratio and the ones without the proper ratio
+
+use PS71Final, clear
 
 twoway (connected Heal_Exp_PC year, sort lcolor(blue)) (line Heal_Exp_GDP year, sort yaxis(2) ///
 lcolor(red)), legend(size(vsmall) rows(2)) xtitle("Year", place(right) margin(medsmall)) ///
@@ -702,6 +706,8 @@ the the two variables here have a positive relationship. */
 restore
 
 ***** Bar Charts *****
+use PS71Final, clear
+
 #delimit ;
 	graph hbar Heal_Exp_PC Population, 
 	over(country)
