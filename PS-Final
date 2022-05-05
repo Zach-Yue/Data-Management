@@ -516,9 +516,9 @@ merge m:m country year using PS75merge, generate(merge76) // the sixth merging w
 
 save PS76merge, replace // All the merging work is done here and I will go on to analyze my data
 
-*****************
-*** Data Analysis
-*****************
+********************
+*** Data Analysis **
+********************
 use PS76merge, clear
 
 replace code = "CZE" if (code=="")
