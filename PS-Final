@@ -489,9 +489,9 @@ merge m:m country year using PS73merge, generate(merge75) // the fifth merging w
 
 save PS75merge, replace
 
-****************************
-*** (Our World in Data) Data
-****************************
+*******************************
+*** (Our World in Data) Data **
+*******************************
 use "https://docs.google.com/uc?id=1IzjRpIl08bZXGqRD_Cpu1hiNX_DXbdah&export=download", clear
 
 rename entity country
